@@ -1,8 +1,8 @@
 package de.mirranet.lingua.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,30 +12,30 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,13 +46,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.mirranet.lingua.BuildConfig
 import de.mirranet.lingua.data.AppState
 import de.mirranet.lingua.engine.Course
 import de.mirranet.lingua.engine.ProgressLogic
@@ -61,207 +61,271 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
-// ---------------------------------------------------------------------- header + tabs
+// ---------------------------------------------------------------------- shell with tab bar
 
 @Composable
 fun HomeScreen(vm: AppViewModel, st: AppState, course: Course) {
-    val today = LocalDate.now().toString()
-    Column(Modifier.fillMaxSize().background(Color.White)) {
-        Column(Modifier.background(Palette.Green).statusBarsPadding()) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+    val tabs = listOf(
+        TabItem("Lernen", Icons.Rounded.Home),
+        TabItem("Fortschritt", Icons.Rounded.Star),
+        TabItem("Einstellungen", Icons.Rounded.Settings),
+    )
+    Column(Modifier.fillMaxSize().background(Ios.GroupedBackground)) {
+        Box(Modifier.weight(1f)) {
+            when (vm.tab) {
+                Tab.LEARN -> LearnTab(vm, st, course)
+                Tab.STATS -> StatsTab(vm, st, course)
+                Tab.SETTINGS -> SettingsTab(vm, st, course)
+            }
+        }
+        TabBar(tabs, vm.tab.ordinal) { vm.tab = Tab.entries[it] }
+    }
+}
+
+// ---------------------------------------------------------------------- Lernen
+
+@Composable
+private fun LearnTab(vm: AppViewModel, st: AppState, course: Course) {
+    var open by remember { mutableStateOf<Skill?>(null) }
+    var lockedInfo by remember { mutableStateOf<Skill?>(null) }
+    val p = st.progress
+    val today = st.progress.xp[LocalDate.now().toString()] ?: 0
+    // Units grouped by level, in course order.
+    val groups = course.skills.fold(mutableListOf<Pair<String?, MutableList<Skill>>>()) { acc, s ->
+        if (acc.isEmpty() || acc.last().first != s.level) acc.add(s.level to mutableListOf(s)) else acc.last().second.add(s)
+        acc
+    }
+
+    LazyColumn(Modifier.fillMaxSize().statusBarsPadding(), contentPadding = PaddingValues(bottom = 24.dp)) {
+        item {
+            LargeTitle("Lernen") {
                 Row(
-                    Modifier.weight(1f).clickable { vm.screen = Screen.CoursePicker },
+                    Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White).clickable { vm.screen = Screen.CoursePicker }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("MirraLingua", color = Color.White, fontWeight = FontWeight.Black, fontSize = 21.sp)
-                    Text("  ${course.flag} ${course.name} ▾", color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(course.flag, fontSize = 20.sp)
+                    Spacer(Modifier.width(6.dp))
+                    Text(course.name, style = IosType.Callout, fontWeight = FontWeight.SemiBold, color = Ios.Blue)
                 }
-                if (st.syncing) {
-                    CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
-                    Spacer(Modifier.width(10.dp))
-                } else if (st.offline) {
-                    Text("offline", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable { vm.sync() })
-                    Spacer(Modifier.width(10.dp))
-                }
-                Text("🔥 ${ProgressLogic.streak(st.progress.xp)}   ⚡ ${st.progress.xp[today] ?: 0}/${st.settings.goal}",
-                    color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
             }
         }
-        Row(Modifier.fillMaxWidth()) {
-            TabButton("Lernen", vm.tab == Tab.LEARN, Modifier.weight(1f)) { vm.tab = Tab.LEARN }
-            TabButton("Fortschritt", vm.tab == Tab.STATS, Modifier.weight(1f)) { vm.tab = Tab.STATS }
+        item { TodayCard(st, today) }
+        item { ContinueCard(vm, st, course) }
+        item {
+            val weak = vm.weakSkills(course)
+            if (course.skills.any { ProgressLogic.isDone(p, course, it) }) {
+                Section {
+                    ListRow(
+                        title = if (weak.isNotEmpty()) "Wiederholen" else "Üben",
+                        subtitle = if (weak.isNotEmpty()) "${weak.size} ${if (weak.size == 1) "Einheit verblasst" else "Einheiten verblassen"} – kurz auffrischen"
+                        else "Gelerntes festigen",
+                        leading = { IconTile("💪", Ios.Orange) },
+                        chevron = true,
+                        onClick = { vm.startPractice(null) },
+                    )
+                }
+            }
         }
-        Box(Modifier.fillMaxWidth().height(2.dp).background(Palette.Gray))
-        Box(Modifier.weight(1f)) {
-            if (vm.tab == Tab.LEARN) SkillTree(vm, st, course) else StatsTab(vm, st, course)
-        }
-    }
-}
-
-@Composable
-private fun TabButton(text: String, active: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text.uppercase(), Modifier.padding(vertical = 13.dp), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp,
-            color = if (active) Palette.Blue else Palette.GrayDark, letterSpacing = 0.5.sp)
-        Box(Modifier.fillMaxWidth().height(3.dp).background(if (active) Palette.Blue else Color.Transparent))
-    }
-}
-
-// ---------------------------------------------------------------------- skill tree
-
-@Composable
-private fun SkillTree(vm: AppViewModel, st: AppState, course: Course) {
-    var open by remember { mutableStateOf<Skill?>(null) }
-    val p = st.progress
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
-        if (course.skills.none { p.skill(course.id, it.id).lessons > 0 }) {
+        groups.forEach { (level, skills) ->
             item {
-                Text(
-                    "Willkommen! Arbeite dich Fertigkeit für Fertigkeit durch den Baum. Jede Lektion hat 3 Herzen – " +
-                            "bei jedem Fehler verlierst du eins. Tipp auf ein unterstrichenes Wort, um seine Bedeutung zu sehen.",
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Palette.BlueLight).padding(14.dp),
-                    fontSize = 15.sp, lineHeight = 21.sp,
-                )
-            }
-        }
-        if (course.skills.any { ProgressLogic.isDone(p, course, it) }) {
-            item {
-                Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
-                    ChunkyButton("💪 Fertigkeiten stärken", { vm.startPractice(null) }, Modifier.widthIn(min = 260.dp),
-                        color = Palette.Blue, lip = Palette.BlueDark)
-                }
-            }
-        }
-        itemsIndexed(course.rows) { i, row ->
-            val unlocked = ProgressLogic.rowOpen(p, course, row)
-            // A heading wherever a new level starts (A1 → A2 → B1).
-            val level = course.skills.firstOrNull { it.row == row }?.level
-            val previous = if (i > 0) course.skills.firstOrNull { it.row == course.rows[i - 1] }?.level else null
-            Column(Modifier.fillMaxWidth()) {
-                if (level != null && level != previous) LevelHeading(level, first = i == 0)
-                Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), horizontalArrangement = Arrangement.Center) {
-                    course.skills.filter { it.row == row }.forEachIndexed { j, skill ->
-                        if (j > 0) Spacer(Modifier.width(26.dp))
-                        SkillNode(skill, unlocked, p.skill(course.id, skill.id).lessons,
-                            ProgressLogic.strength(p, course, skill)) { open = skill }
+                Section(header = levelName(level)) {
+                    skills.forEachIndexed { i, skill ->
+                        if (i > 0) RowDivider(inset = 66.dp)
+                        UnitRow(st, course, skill) {
+                            if (ProgressLogic.rowOpen(p, course, skill.row)) open = skill else lockedInfo = skill
+                        }
                     }
                 }
             }
         }
-        item { Spacer(Modifier.height(40.dp)) }
     }
-    open?.let { SkillSheet(vm, st, course, it) { open = null } }
-}
 
-@Composable
-private fun LevelHeading(level: String, first: Boolean) {
-    val name = when (level.uppercase()) {
-        "A1" -> "Einstieg"
-        "A2" -> "Grundlagen"
-        "B1" -> "Fortgeschritten"
-        "B2" -> "Selbstständig"
-        else -> null
-    }
-    Row(Modifier.fillMaxWidth().padding(top = if (first) 12.dp else 22.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.weight(1f).height(2.dp).background(Palette.Gray))
-        Text(
-            if (name != null) "Stufe $level · $name" else "Stufe $level",
-            Modifier.padding(horizontal = 12.dp), color = Palette.GrayDark, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp,
+    open?.let { UnitSheet(vm, st, course, it) { open = null } }
+    lockedInfo?.let {
+        IosAlert(
+            title = "Noch gesperrt",
+            message = "„${it.title}“ wird frei, sobald du die Einheiten davor abgeschlossen hast.",
+            confirmText = "OK", dismissText = null,
+            onConfirm = { lockedInfo = null }, onDismiss = { lockedInfo = null },
         )
-        Box(Modifier.weight(1f).height(2.dp).background(Palette.Gray))
     }
 }
 
+private fun levelName(level: String?): String = when (level?.uppercase()) {
+    null -> "Einheiten"
+    "A1" -> "Stufe A1 · Einstieg"
+    "A2" -> "Stufe A2 · Grundlagen"
+    "B1" -> "Stufe B1 · Fortgeschritten"
+    "B2" -> "Stufe B2 · Selbstständig"
+    else -> "Stufe $level"
+}
+
 @Composable
-private fun SkillNode(skill: Skill, unlocked: Boolean, lessonsDone: Int, strength: Int, onClick: () -> Unit) {
-    val done = lessonsDone >= skill.lessonCount
-    val face = when {
-        !unlocked -> Palette.Gray
-        done && strength < 4 -> Color(0xFFFFF2C7)
-        done -> Palette.Gold
-        else -> Color(skill.color)
-    }
-    Column(Modifier.width(104.dp).clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(92.dp), contentAlignment = Alignment.Center) {
-            if (unlocked && !done && lessonsDone > 0) {
-                Canvas(Modifier.size(92.dp)) {
-                    drawArc(Palette.Gray, 0f, 360f, false, style = Stroke(7.dp.toPx()))
-                    drawArc(Palette.Gold, -90f, 360f * lessonsDone / skill.lessonCount, false, style = Stroke(7.dp.toPx()))
-                }
+private fun TodayCard(st: AppState, today: Int) {
+    Section {
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Heute", style = IosType.Footnote, color = Ios.SecondaryLabel)
+                Text("$today von ${st.settings.goal} XP", style = IosType.Headline)
+                Spacer(Modifier.height(8.dp))
+                ProgressBar(today.toFloat() / st.settings.goal, color = Ios.Orange)
             }
-            Box(Modifier.size(78.dp).padding(top = 5.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.18f)))
-            Box(Modifier.size(78.dp).padding(bottom = 5.dp).clip(CircleShape).background(face), contentAlignment = Alignment.Center) {
-                Text(skill.icon, fontSize = 32.sp, color = if (unlocked) Color.Unspecified else Color.Black.copy(alpha = 0.35f))
+            Spacer(Modifier.width(20.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("🔥", fontSize = 26.sp)
+                val s = ProgressLogic.streak(st.progress.xp)
+                Text("$s ${if (s == 1) "Tag" else "Tage"}", style = IosType.Subhead, fontWeight = FontWeight.SemiBold)
             }
         }
-        Text(skill.title, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, textAlign = TextAlign.Center,
-            color = if (unlocked) Palette.Text else Palette.GrayDark, lineHeight = 17.sp)
-        when {
-            done -> Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                (1..5).forEach { Box(Modifier.size(12.dp, 6.dp).clip(RoundedCornerShape(3.dp)).background(if (it <= strength) Palette.Gold else Palette.Gray)) }
+        if (st.syncing || st.offline || st.pendingEvents > 0) {
+            RowDivider()
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (st.syncing) {
+                    CircularProgressIndicator(Modifier.size(14.dp), color = Ios.SecondaryLabel, strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(
+                    when {
+                        st.syncing -> "Wird gespeichert …"
+                        st.offline -> "Offline – dein Fortschritt wird später gespeichert."
+                        else -> "Wird gleich gespeichert."
+                    },
+                    style = IosType.Footnote, color = Ios.SecondaryLabel,
+                )
             }
-            unlocked -> Text("$lessonsDone/${skill.lessonCount}", fontSize = 12.sp, color = Palette.Muted, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun ContinueCard(vm: AppViewModel, st: AppState, course: Course) {
+    val next = vm.nextLesson(course)
+    Section {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            if (next == null) {
+                Text("Alles geschafft! 🎉", style = IosType.Title3)
+                Text("Du hast alle Einheiten abgeschlossen. Mit „Üben“ hältst du alles frisch.",
+                    style = IosType.Callout, color = Ios.SecondaryLabel, modifier = Modifier.padding(top = 4.dp, bottom = 14.dp))
+                IosButton("Jetzt üben", { vm.startPractice(null) }, Modifier.fillMaxWidth())
+            } else {
+                val (skill, lesson) = next
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconTile(skill.icon, Color(skill.color), size = 60.dp)
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(if (lesson == 0) "Als Nächstes" else "Weiter lernen", style = IosType.Footnote, color = Ios.SecondaryLabel)
+                        Text(skill.title, style = IosType.Title3)
+                        Text("Lektion ${lesson + 1} von ${skill.lessonCount} · ${ProgressLogic.difficultyLabel(vm.difficulty(course, skill))}",
+                            style = IosType.Subhead, color = Ios.SecondaryLabel)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                IosButton("Lektion starten", { vm.startLesson(skill, lesson) }, Modifier.fillMaxWidth())
+            }
+        }
+    }
+}
+
+@Composable
+private fun UnitRow(st: AppState, course: Course, skill: Skill, onClick: () -> Unit) {
+    val p = st.progress
+    val open = ProgressLogic.rowOpen(p, course, skill.row)
+    val sp = p.skill(course.id, skill.id)
+    val done = sp.lessons >= skill.lessonCount
+    val strength = ProgressLogic.strength(p, course, skill)
+    ListRow(
+        title = skill.title,
+        titleColor = if (open) Ios.Label else Ios.SecondaryLabel,
+        subtitle = when {
+            !open -> "Gesperrt"
+            done && strength < 4 -> "Fertig · bitte wiederholen"
+            done -> "Fertig"
+            sp.lessons > 0 -> "Lektion ${sp.lessons + 1} von ${skill.lessonCount}"
+            else -> "${skill.lessonCount} Lektionen"
+        },
+        leading = { IconTile(skill.icon, Color(skill.color), dimmed = !open) },
+        onClick = onClick,
+        chevron = open && !done,
+        trailing = {
+            when {
+                !open -> Icon(Icons.Rounded.Lock, contentDescription = "gesperrt", tint = Ios.TertiaryLabel, modifier = Modifier.size(20.dp))
+                done -> StrengthBars(strength)
+                sp.lessons > 0 -> Box(Modifier.width(56.dp)) { ProgressBar(sp.lessons.toFloat() / skill.lessonCount, color = Ios.Blue, height = 6.dp) }
+            }
+        },
+    )
+}
+
+@Composable
+private fun StrengthBars(strength: Int) {
+    Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
+        (1..5).forEach {
+            Box(Modifier.size(width = 6.dp, height = (6 + it * 3).dp).clip(RoundedCornerShape(2.dp))
+                .background(if (it <= strength) (if (strength < 4) Ios.Orange else Ios.Green) else Ios.Fill))
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun SkillSheet(vm: AppViewModel, st: AppState, course: Course, skill: Skill, onClose: () -> Unit) {
+private fun UnitSheet(vm: AppViewModel, st: AppState, course: Course, skill: Skill, onClose: () -> Unit) {
     val p = st.progress
-    val unlocked = ProgressLogic.rowOpen(p, course, skill.row)
     val sp = p.skill(course.id, skill.id)
     val done = sp.lessons >= skill.lessonCount
-    ModalBottomSheet(onDismissRequest = onClose, containerColor = Color.White) {
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp).verticalScroll(rememberScrollState())) {
-            Text("${skill.icon} ${skill.title}", fontSize = 22.sp, fontWeight = FontWeight.Black)
-            val info = when {
-                !unlocked -> "Diese Fertigkeit ist noch gesperrt. Schließe zuerst alle Fertigkeiten darüber ab."
-                done -> {
-                    val s = ProgressLogic.strength(p, course, skill)
-                    (if (s >= 5) "Gemeistert! Alle Lektionen abgeschlossen." else "Diese Fertigkeit verblasst langsam – Zeit zum Wiederholen.") + " Stärke: $s/5"
-                }
-                else -> "Lektion ${sp.lessons + 1} von ${skill.lessonCount}"
-            }
-            Text(info, color = Palette.Muted, modifier = Modifier.padding(top = 8.dp))
-            if (unlocked) {
-                val d = vm.difficulty(course, skill)
-                val details = listOfNotNull(
-                    skill.level?.let { "Stufe $it" },
-                    "Schwierigkeit: ${ProgressLogic.difficultyLabel(d)}",
-                    if (sp.answers > 0) "${(sp.accuracy * 100).toInt()} % richtig" else null,
-                ).joinToString(" · ")
-                Text(details, color = Palette.BlueDark, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
-                Text("Die Aufgaben passen sich deinen Antworten an.", color = Palette.Muted, fontSize = 13.sp)
-            }
-            Spacer(Modifier.height(10.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                skill.words.forEach { (t, d) ->
-                    Text("$t – $d", Modifier.clip(RoundedCornerShape(10.dp)).background(Color(0xFFF7F7F7))
-                        .border(2.dp, Palette.Gray, RoundedCornerShape(10.dp)).padding(horizontal = 9.dp, vertical = 4.dp), fontSize = 14.sp)
+    ModalBottomSheet(
+        onDismissRequest = onClose, containerColor = Ios.GroupedBackground,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 16.dp)) {
+            Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconTile(skill.icon, Color(skill.color), size = 56.dp)
+                Spacer(Modifier.width(14.dp))
+                Column {
+                    Text(skill.title, style = IosType.Title2)
+                    val strength = ProgressLogic.strength(p, course, skill)
+                    Text(
+                        when {
+                            done && strength >= 5 -> "Fertig – sitzt sicher"
+                            done -> "Fertig – Stärke $strength von 5"
+                            else -> "Lektion ${sp.lessons + 1} von ${skill.lessonCount}"
+                        },
+                        style = IosType.Callout, color = Ios.SecondaryLabel,
+                    )
                 }
             }
-            Spacer(Modifier.height(18.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                when {
-                    !unlocked -> ChunkyButton("OK", onClose, Modifier.fillMaxWidth(), outlined = true, textColor = Palette.Blue)
-                    done -> {
-                        ChunkyButton("Stärken", { onClose(); vm.startPractice(skill) }, Modifier.fillMaxWidth())
-                        (0 until skill.lessonCount).forEach { i ->
-                            ChunkyButton("Lektion ${i + 1} wiederholen", { onClose(); vm.startLesson(skill, i) }, Modifier.fillMaxWidth(),
-                                outlined = true, textColor = Palette.Blue)
+            Section(footer = "Die Aufgaben passen sich deinen Antworten an.") {
+                skill.level?.let {
+                    ListRow("Stufe", value = it)
+                    RowDivider()
+                }
+                ListRow("Schwierigkeit", value = ProgressLogic.difficultyLabel(vm.difficulty(course, skill)))
+                if (sp.answers > 0) {
+                    RowDivider()
+                    ListRow("Richtige Antworten", value = "${(sp.accuracy * 100).toInt()} %")
+                }
+            }
+            Section(header = "Wörter") {
+                FlowRow(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    skill.words.forEach { (t, d) ->
+                        Column(Modifier.clip(RoundedCornerShape(10.dp)).background(Ios.FillLight).padding(horizontal = 12.dp, vertical = 8.dp)) {
+                            Text(t, style = IosType.Callout, fontWeight = FontWeight.SemiBold)
+                            Text(d, style = IosType.Footnote, color = Ios.SecondaryLabel)
                         }
                     }
-                    else -> {
-                        ChunkyButton("Lektion starten", { onClose(); vm.startLesson(skill, sp.lessons) }, Modifier.fillMaxWidth())
-                        if (sp.lessons > 0) {
-                            ChunkyButton("Vorherige Lektion wiederholen", { onClose(); vm.startLesson(skill, sp.lessons - 1) },
-                                Modifier.fillMaxWidth(), outlined = true, textColor = Palette.Blue)
-                        }
+                }
+            }
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (done) {
+                    IosButton("Üben", { onClose(); vm.startPractice(skill) }, Modifier.fillMaxWidth())
+                    (0 until skill.lessonCount).forEach { i ->
+                        IosButton("Lektion ${i + 1} wiederholen", { onClose(); vm.startLesson(skill, i) }, Modifier.fillMaxWidth(), style = ButtonStyle.Tinted)
+                    }
+                } else {
+                    IosButton("Lektion ${sp.lessons + 1} starten", { onClose(); vm.startLesson(skill, sp.lessons) }, Modifier.fillMaxWidth())
+                    if (sp.lessons > 0) {
+                        IosButton("Lektion ${sp.lessons} wiederholen", { onClose(); vm.startLesson(skill, sp.lessons - 1) },
+                            Modifier.fillMaxWidth(), style = ButtonStyle.Tinted)
                     }
                 }
             }
@@ -273,135 +337,77 @@ private fun SkillSheet(vm: AppViewModel, st: AppState, course: Course, skill: Sk
 
 @Composable
 fun CoursePicker(vm: AppViewModel, st: AppState, firstTime: Boolean) {
-    Column(
-        Modifier.fillMaxSize().background(Color.White).statusBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(if (firstTime) "Was möchtest du lernen?" else "Kurs wählen", fontSize = 26.sp, fontWeight = FontWeight.Black)
-        Text("Für Deutschsprachige. Dein Fortschritt bleibt pro Kurs erhalten.", color = Palette.Muted)
-        st.courses.forEach { c ->
-            val done = c.skills.count { ProgressLogic.isDone(st.progress, c, it) }
-            val selected = c.id == st.settings.course
-            Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-                    .background(if (selected) Palette.BlueLight else Color.White)
-                    .border(2.dp, if (selected) Color(0xFF84D8FF) else Palette.Gray, RoundedCornerShape(14.dp))
-                    .clickable { vm.selectCourse(c.id) }.padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(c.flag, fontSize = 32.sp)
-                Spacer(Modifier.width(14.dp))
-                Column {
-                    Text(c.name, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                    Text("$done/${c.skills.size} Fertigkeiten", color = Palette.Muted, fontSize = 14.sp)
-                }
+    if (!firstTime) BackHandler { vm.screen = Screen.Home }
+    Column(Modifier.fillMaxSize().background(Ios.GroupedBackground).statusBarsPadding().verticalScroll(rememberScrollState())) {
+        if (!firstTime) {
+            Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), contentAlignment = Alignment.CenterEnd) {
+                IosButton("Fertig", { vm.screen = Screen.Home }, style = ButtonStyle.Plain, height = 44.dp)
             }
         }
-        if (!firstTime) {
-            TextButton(onClick = { vm.screen = Screen.Home }) { Text("Zurück", color = Palette.Blue, fontWeight = FontWeight.Bold) }
+        LargeTitle(if (firstTime) "Was möchtest du lernen?" else "Kurs wählen")
+        Text("Alle Kurse sind für Deutschsprachige. Dein Fortschritt bleibt pro Kurs gespeichert.",
+            style = IosType.Callout, color = Ios.SecondaryLabel, modifier = Modifier.padding(horizontal = 20.dp))
+        Section {
+            st.courses.forEachIndexed { i, c ->
+                if (i > 0) RowDivider(inset = 72.dp)
+                val done = c.skills.count { ProgressLogic.isDone(st.progress, c, it) }
+                ListRow(
+                    title = c.name,
+                    subtitle = "$done von ${c.skills.size} Einheiten",
+                    leading = { Box(Modifier.size(42.dp), contentAlignment = Alignment.Center) { Text(c.flag, fontSize = 34.sp) } },
+                    onClick = { vm.selectCourse(c.id) },
+                    trailing = {
+                        if (c.id == st.settings.course) Icon(Icons.Rounded.Check, contentDescription = "ausgewählt", tint = Ios.Blue)
+                    },
+                )
+            }
         }
     }
 }
 
-// ---------------------------------------------------------------------- stats + settings
+// ---------------------------------------------------------------------- Fortschritt
 
 @Composable
 private fun StatsTab(vm: AppViewModel, st: AppState, course: Course) {
     val xp = st.progress.xp
     val today = LocalDate.now()
-    var dialog by remember { mutableStateOf<String?>(null) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatCard("🔥 ${ProgressLogic.streak(xp)}", "Tage in Folge", Modifier.weight(1f))
-            StatCard("${xp.values.sum()}", "XP gesamt", Modifier.weight(1f))
-            StatCard("${course.skills.count { ProgressLogic.isDone(st.progress, course, it) }}/${course.skills.size}", "Fertigkeiten ${course.flag}", Modifier.weight(1f))
-        }
-        Section("Heute: ${xp[today.toString()] ?: 0} von ${st.settings.goal} XP") {
-            val f = ((xp[today.toString()] ?: 0).toFloat() / st.settings.goal).coerceIn(0f, 1f)
-            Box(Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(6.dp)).background(Palette.Gray)) {
-                Box(Modifier.fillMaxWidth(f).fillMaxHeight().background(Palette.Orange))
-            }
-        }
-        Section("Letzte 7 Tage") { WeekChart(xp, st.settings.goal, today) }
-        Section("Tagesziel") {
-            val goals = listOf(10 to "Locker", 20 to "Normal", 30 to "Ernsthaft", 50 to "Wahnsinnig")
-            goals.chunked(2).forEach { pair ->
-                Row(Modifier.padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    pair.forEach { (v, name) ->
-                        val on = st.settings.goal == v
-                        Column(
-                            Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(if (on) Palette.BlueLight else Color.White)
-                                .border(2.dp, if (on) Color(0xFF84D8FF) else Palette.Gray, RoundedCornerShape(12.dp))
-                                .clickable { vm.repo.updateSettings { it.copy(goal = v) } }.padding(10.dp),
-                        ) {
-                            Text(name, fontWeight = FontWeight.ExtraBold, color = if (on) Palette.BlueDark else Palette.Text)
-                            Text("$v XP pro Tag", fontSize = 13.sp, color = Palette.Muted)
-                        }
-                    }
-                }
-            }
-        }
-        Section("Einstellungen") {
-            ToggleRow("Soundeffekte", st.settings.sound) { v -> vm.repo.updateSettings { it.copy(sound = v) } }
-            ToggleRow("Hörübungen", st.settings.listen) { v -> vm.repo.updateSettings { it.copy(listen = v) } }
-            if (!vm.audio.available) {
-                Text("Für ${course.name} ist auf diesem Gerät keine Sprachausgabe installiert.", fontSize = 13.sp, color = Palette.Muted)
-            }
-            Spacer(Modifier.height(10.dp))
-            ChunkyButton("${course.name} zurücksetzen", { dialog = "reset" }, Modifier.fillMaxWidth(), outlined = true, textColor = Palette.RedDark)
-        }
-        Section("Konto: ${st.username ?: ""}") {
-            Text(
-                if (st.pendingEvents > 0) "${st.pendingEvents} Ergebnis(se) warten auf die Übertragung zum Server."
-                else "Alles mit ${st.serverUrl.removePrefix("https://")} synchronisiert.",
-                fontSize = 14.sp, color = Palette.Muted,
-            )
-            Spacer(Modifier.height(10.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                ChunkyButton("Jetzt synchronisieren", { vm.sync() }, Modifier.fillMaxWidth(), outlined = true, textColor = Palette.Blue)
-                ChunkyButton("Passwort ändern", { dialog = "password" }, Modifier.fillMaxWidth(), outlined = true, textColor = Palette.Blue)
-                ChunkyButton("Abmelden", { dialog = "logout" }, Modifier.fillMaxWidth(), outlined = true, textColor = Palette.Blue)
-                ChunkyButton("Konto löschen", { dialog = "delete" }, Modifier.fillMaxWidth(), outlined = true, textColor = Palette.RedDark)
-            }
-        }
-        Spacer(Modifier.height(24.dp))
-    }
+    val p = st.progress
+    val skills = p.courses[course.id].orEmpty().values.filter { it.answers > 0 }
+    val accuracy = if (skills.isEmpty()) null
+    else (100 * skills.sumOf { it.accuracy * it.answers } / skills.sumOf { it.answers }).toInt()
 
-    when (dialog) {
-        "reset" -> ConfirmDialog("${course.name} zurücksetzen?",
-            "Dein Fortschritt im ${course.name}-Kurs wird gelöscht. XP und Serie bleiben erhalten.", "Zurücksetzen",
-            onConfirm = { vm.repo.resetCourse(course.id); dialog = null }, onDismiss = { dialog = null })
-        "logout" -> ConfirmDialog("Abmelden?",
-            if (st.pendingEvents > 0) "Es gibt noch nicht übertragene Ergebnisse. Ich versuche sie vorher hochzuladen – ohne Verbindung gehen sie verloren."
-            else "Dein Fortschritt ist auf dem Server gespeichert.", "Abmelden",
-            onConfirm = { dialog = null; vm.logout { } }, onDismiss = { dialog = null })
-        "password" -> PasswordDialog(vm) { dialog = null }
-        "delete" -> DeleteDialog(vm) { dialog = null }
+    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
+        LargeTitle("Fortschritt")
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatTile("🔥", "${ProgressLogic.streak(xp)}", "Tage in Folge", Modifier.weight(1f))
+                StatTile("⚡", "${xp.values.sum()}", "XP gesamt", Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatTile(course.flag, "${course.skills.count { ProgressLogic.isDone(p, course, it) }}/${course.skills.size}", "Einheiten fertig", Modifier.weight(1f))
+                StatTile("🎯", accuracy?.let { "$it %" } ?: "–", "richtig beantwortet", Modifier.weight(1f))
+            }
+        }
+        Section(header = "Diese Woche") {
+            Box(Modifier.padding(16.dp)) { WeekChart(xp, st.settings.goal, today) }
+        }
+        val goals = listOf(10 to "Locker", 20 to "Normal", 30 to "Ernsthaft", 50 to "Intensiv")
+        val sel = goals.indexOfFirst { it.first == st.settings.goal }.coerceAtLeast(0)
+        Section(header = "Tagesziel", footer = "${goals[sel].second}: ${goals[sel].first} XP am Tag – das sind etwa ${goals[sel].first / 12 + 1} Lektionen.") {
+            Box(Modifier.padding(12.dp)) {
+                Segmented(goals.map { "${it.first}" }, sel, { i -> vm.repo.updateSettings { it.copy(goal = goals[i].first) } })
+            }
+        }
     }
 }
 
 @Composable
-private fun StatCard(value: String, label: String, modifier: Modifier) {
-    Column(modifier.clip(RoundedCornerShape(16.dp)).border(2.dp, Palette.Gray, RoundedCornerShape(16.dp)).padding(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontSize = 22.sp, fontWeight = FontWeight.Black)
-        Text(label, fontSize = 12.sp, color = Palette.Muted, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-    }
-}
-
-@Composable
-private fun Section(title: String, content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).border(2.dp, Palette.Gray, RoundedCornerShape(16.dp)).padding(16.dp)) {
-        Text(title, fontWeight = FontWeight.Black, fontSize = 17.sp, modifier = Modifier.padding(bottom = 12.dp))
-        content()
-    }
-}
-
-@Composable
-private fun ToggleRow(label: String, value: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f), fontWeight = FontWeight.Bold)
-        Switch(checked = value, onCheckedChange = onChange)
+private fun StatTile(emoji: String, value: String, label: String, modifier: Modifier) {
+    Column(modifier.clip(RoundedCornerShape(14.dp)).background(Color.White).padding(16.dp)) {
+        Text(emoji, fontSize = 22.sp)
+        Spacer(Modifier.height(6.dp))
+        Text(value, style = IosType.Title2)
+        Text(label, style = IosType.Footnote, color = Ios.SecondaryLabel)
     }
 }
 
@@ -410,103 +416,141 @@ private fun WeekChart(xp: Map<String, Int>, goal: Int, today: LocalDate) {
     val days = (6 downTo 0).map { today.minusDays(it.toLong()) }
     val values = days.map { xp[it.toString()] ?: 0 }
     val max = maxOf(goal * 1.25f, (values.maxOrNull() ?: 0).toFloat(), 10f)
-    val barArea = 110.dp
-    Box(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
-            days.forEachIndexed { i, d ->
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(if (values[i] > 0) "${values[i]}" else "", fontSize = 12.sp, color = Palette.Muted, fontWeight = FontWeight.Bold)
-                    Box(Modifier.height(barArea), contentAlignment = Alignment.BottomCenter) {
-                        Box(Modifier.width(30.dp).height(barArea * (values[i] / max)).clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                            .background(if (i == 6) Palette.Green else Palette.Gold))
+    val area = 120.dp
+    Column {
+        Box(Modifier.fillMaxWidth().height(area)) {
+            Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Bottom) {
+                days.indices.forEach { i ->
+                    Box(Modifier.weight(1f).height(area), contentAlignment = Alignment.BottomCenter) {
+                        Box(Modifier.fillMaxWidth().height(area * (values[i] / max)).clip(RoundedCornerShape(6.dp))
+                            .background(if (values[i] >= goal) Ios.Green else if (i == 6) Ios.Blue else Ios.Blue.copy(alpha = 0.45f)))
                     }
-                    Text(d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.GERMAN).take(2), fontSize = 12.sp, color = Palette.Muted, fontWeight = FontWeight.Bold)
                 }
             }
-        }
-        // Goal line
-        Canvas(Modifier.fillMaxWidth().height(barArea)) {
-            val y = size.height * (1f - goal / max)
-            val dash = 8.dp.toPx()
-            var x = 0f
-            while (x < size.width) {
-                drawLine(Palette.Orange, Offset(x, y + 17.dp.toPx()), Offset(minOf(x + dash, size.width), y + 17.dp.toPx()), 2.dp.toPx())
-                x += dash * 2
+            Canvas(Modifier.fillMaxSize()) {
+                val y = size.height * (1f - goal / max)
+                drawLine(Ios.Orange, Offset(0f, y), Offset(size.width, y), 2.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
             }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            days.forEachIndexed { i, d ->
+                Text(d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.GERMAN).take(2), Modifier.weight(1f),
+                    style = IosType.Footnote, color = if (i == 6) Ios.Label else Ios.SecondaryLabel,
+                    fontWeight = if (i == 6) FontWeight.SemiBold else FontWeight.Normal, textAlign = TextAlign.Center)
+            }
+        }
+        Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(width = 16.dp, height = 2.dp).background(Ios.Orange))
+            Text("  Tagesziel $goal XP", style = IosType.Footnote, color = Ios.SecondaryLabel)
         }
     }
 }
 
+// ---------------------------------------------------------------------- Einstellungen
+
 @Composable
-private fun ConfirmDialog(title: String, text: String, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss, containerColor = Color.White,
-        title = { Text(title, fontWeight = FontWeight.Black) },
-        text = { Text(text) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(confirm, color = Palette.RedDark, fontWeight = FontWeight.Bold) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen", color = Palette.Blue) } },
-    )
+private fun SettingsTab(vm: AppViewModel, st: AppState, course: Course) {
+    var dialog by remember { mutableStateOf<String?>(null) }
+    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
+        LargeTitle("Einstellungen")
+        Section(header = "Kurs") {
+            ListRow("Ich lerne", value = "${course.flag} ${course.name}", chevron = true,
+                leading = { IconTile("🌍", Ios.Blue) }, onClick = { vm.screen = Screen.CoursePicker })
+        }
+        Section(
+            header = "Lernen",
+            footer = if (!vm.audio.available) "Für ${course.name} ist auf diesem Gerät keine Sprachausgabe installiert. " +
+                    "Du kannst sie in den Android-Einstellungen unter „Sprachausgabe“ nachinstallieren." else null,
+        ) {
+            ListRow("Töne", leading = { IconTile("🔔", Ios.Red) },
+                trailing = { IosSwitch(st.settings.sound, { v -> vm.repo.updateSettings { it.copy(sound = v) } }) })
+            RowDivider(inset = 66.dp)
+            ListRow("Hörübungen", leading = { IconTile("🎧", Ios.Purple) },
+                trailing = { IosSwitch(st.settings.listen, { v -> vm.repo.updateSettings { it.copy(listen = v) } }) })
+        }
+        Section(header = "Anzeige", footer = "Macht alle Texte in der App größer.") {
+            ListRow("Große Schrift", leading = { IconTile("🔍", Ios.Teal) },
+                trailing = { IosSwitch(st.largeText, { vm.repo.setLargeText(it) }) })
+        }
+        Section(
+            header = "Konto",
+            footer = when {
+                st.offline -> "Gerade keine Verbindung. Dein Fortschritt wird gespeichert, sobald du wieder online bist."
+                st.pendingEvents > 0 -> "${st.pendingEvents} Ergebnis(se) werden gleich gespeichert."
+                else -> "Dein Fortschritt ist sicher auf dem Server gespeichert."
+            },
+        ) {
+            ListRow("Angemeldet als", value = st.username ?: "", leading = { IconTile("👤", Ios.SecondaryLabel) })
+            RowDivider(inset = 66.dp)
+            ListRow("Jetzt speichern", leading = { IconTile("🔄", Ios.Green) }, onClick = { vm.sync() },
+                trailing = { if (st.syncing) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Ios.SecondaryLabel) })
+            RowDivider(inset = 66.dp)
+            ListRow("Passwort ändern", leading = { IconTile("🔑", Ios.Orange) }, chevron = true, onClick = { dialog = "password" })
+            RowDivider(inset = 66.dp)
+            ListRow("Abmelden", titleColor = Ios.Blue, leading = { IconTile("🚪", Ios.Blue) }, onClick = { dialog = "logout" })
+        }
+        Section {
+            ListRow("${course.name} von vorne beginnen", titleColor = Ios.Red, onClick = { dialog = "reset" })
+            RowDivider()
+            ListRow("Konto löschen", titleColor = Ios.Red, onClick = { dialog = "delete" })
+        }
+        Text("MirraLingua ${BuildConfig.VERSION_NAME} · ${st.serverUrl.removePrefix("https://")}",
+            style = IosType.Footnote, color = Ios.TertiaryLabel, textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(16.dp))
+    }
+
+    when (dialog) {
+        "reset" -> IosAlert(
+            "${course.name} von vorne beginnen?",
+            "Alle Einheiten in ${course.name} werden zurückgesetzt. Deine XP und deine Serie bleiben.",
+            "Zurücksetzen", { vm.repo.resetCourse(course.id); dialog = null }, { dialog = null }, destructive = true,
+        )
+        "logout" -> IosAlert(
+            "Abmelden?",
+            if (st.pendingEvents > 0) "Es gibt noch Ergebnisse, die nicht gespeichert sind. Ohne Internet gehen sie verloren."
+            else "Dein Fortschritt bleibt auf dem Server. Du kannst dich jederzeit wieder anmelden.",
+            "Abmelden", { dialog = null; vm.logout { } }, { dialog = null }, destructive = true,
+        )
+        "password" -> PasswordAlert(vm) { dialog = null }
+        "delete" -> DeleteAlert(vm) { dialog = null }
+    }
 }
 
 @Composable
-private fun PasswordDialog(vm: AppViewModel, onDismiss: () -> Unit) {
-    var old by remember { mutableStateOf("") }
-    var new by remember { mutableStateOf("") }
+private fun PasswordAlert(vm: AppViewModel, onDismiss: () -> Unit) {
+    var old by remember { mutableStateOf(TextFieldValue("")) }
+    var new by remember { mutableStateOf(TextFieldValue("")) }
     var msg by remember { mutableStateOf<String?>(null) }
     var done by remember { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = onDismiss, containerColor = Color.White,
-        title = { Text("Passwort ändern", fontWeight = FontWeight.Black) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (done) {
-                    Text("Passwort geändert. Andere Geräte wurden abgemeldet.")
-                } else {
-                    PasswordField("Aktuelles Passwort", old) { old = it }
-                    PasswordField("Neues Passwort (min. 8 Zeichen)", new) { new = it }
-                    msg?.let { Text(it, color = Palette.RedDark) }
-                }
-            }
+    if (done) {
+        IosAlert("Passwort geändert", "Auf deinen anderen Geräten musst du dich neu anmelden.", "OK", onDismiss, onDismiss, dismissText = null)
+        return
+    }
+    IosAlert(
+        "Passwort ändern", null, "Ändern",
+        onConfirm = {
+            if (new.text.length < 8) msg = "Das neue Passwort braucht mindestens 8 Zeichen."
+            else vm.changePassword(old.text, new.text) { err -> if (err == null) done = true else msg = err }
         },
-        confirmButton = {
-            TextButton(onClick = {
-                if (done) onDismiss()
-                else if (new.length < 8) msg = "Das neue Passwort ist zu kurz."
-                else vm.changePassword(old, new) { err -> if (err == null) done = true else msg = err }
-            }) { Text(if (done) "OK" else "Ändern", fontWeight = FontWeight.Bold, color = Palette.Blue) }
-        },
-        dismissButton = { if (!done) TextButton(onClick = onDismiss) { Text("Abbrechen", color = Palette.Muted) } },
-    )
+        onDismiss = onDismiss,
+    ) {
+        IosTextField(old, { old = it }, "Aktuelles Passwort", password = true)
+        IosTextField(new, { new = it }, "Neues Passwort", password = true)
+        msg?.let { Text(it, style = IosType.Footnote, color = Ios.RedDark) }
+    }
 }
 
 @Composable
-private fun DeleteDialog(vm: AppViewModel, onDismiss: () -> Unit) {
-    var pw by remember { mutableStateOf("") }
+private fun DeleteAlert(vm: AppViewModel, onDismiss: () -> Unit) {
+    var pw by remember { mutableStateOf(TextFieldValue("")) }
     var msg by remember { mutableStateOf<String?>(null) }
-    AlertDialog(
-        onDismissRequest = onDismiss, containerColor = Color.White,
-        title = { Text("Konto löschen?", fontWeight = FontWeight.Black) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Dein Konto und dein gesamter Fortschritt werden dauerhaft vom Server gelöscht.")
-                PasswordField("Passwort zur Bestätigung", pw) { pw = it }
-                msg?.let { Text(it, color = Palette.RedDark) }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { vm.deleteAccount(pw) { err -> if (err == null) onDismiss() else msg = err } }) {
-                Text("Endgültig löschen", color = Palette.RedDark, fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen", color = Palette.Blue) } },
-    )
-}
-
-@Composable
-private fun PasswordField(label: String, value: String, onChange: (String) -> Unit) {
-    OutlinedTextField(
-        value = value, onValueChange = onChange, label = { Text(label) }, singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-    )
+    IosAlert(
+        "Konto löschen?", "Dein Konto und dein ganzer Fortschritt werden für immer gelöscht.", "Löschen",
+        onConfirm = { vm.deleteAccount(pw.text) { err -> if (err == null) onDismiss() else msg = err } },
+        onDismiss = onDismiss, destructive = true,
+    ) {
+        IosTextField(pw, { pw = it }, "Passwort zur Bestätigung", password = true)
+        msg?.let { Text(it, style = IosType.Footnote, color = Ios.RedDark) }
+    }
 }

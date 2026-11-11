@@ -82,6 +82,11 @@ only copied into an *empty* content folder on first start – after updating the
 
 ## Android app
 
+The interface follows an iOS-like look that is meant to be easy for people who rarely use a phone: grouped
+lists on a light grey background, large text and 56 dp touch targets, a bottom tab bar (Lernen · Fortschritt ·
+Einstellungen), one big "Lektion starten" button for the next lesson, plain-language messages, and an optional
+"Große Schrift" switch that enlarges all text by 20 % on top of the system setting.
+
 Open `android/` in Android Studio, or build from the command line (needs the Android SDK, `ANDROID_HOME` set):
 
 ```bash

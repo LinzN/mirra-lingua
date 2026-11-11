@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import de.mirranet.lingua.ui.AppViewModel
@@ -23,7 +25,8 @@ class MainActivity : ComponentActivity() {
             override fun onResume(owner: LifecycleOwner) = vm.sync()
         })
         setContent {
-            LinguaTheme {
+            val st by vm.state.collectAsState()
+            LinguaTheme(largeText = st.largeText) {
                 LinguaRoot(vm)
             }
         }

@@ -31,6 +31,8 @@ data class AppState(
     val progress: Progress,
     val settings: Codec.Settings,
     val pendingEvents: Int,
+    /** Device-only: larger text for easier reading. */
+    val largeText: Boolean = false,
     val syncing: Boolean = false,
     val offline: Boolean = false,
     /** One-off message such as "new lessons available"; cleared by the UI. */
@@ -68,6 +70,7 @@ class Repository(context: Context) {
             progress = fold(store.serverProgress(), pending, courses),
             settings = store.settings(),
             pendingEvents = pending.size,
+            largeText = store.largeText,
         )
     }
 
@@ -85,6 +88,11 @@ class Repository(context: Context) {
         pending.fold(server) { p, e -> ProgressLogic.apply(p, e, courses.firstOrNull { it.id == e.course }) }
 
     fun consumeMessage() = _state.update { it.copy(message = null) }
+
+    fun setLargeText(on: Boolean) {
+        store.largeText = on
+        _state.update { it.copy(largeText = on) }
+    }
 
     // ------------------------------------------------------------------ account
 

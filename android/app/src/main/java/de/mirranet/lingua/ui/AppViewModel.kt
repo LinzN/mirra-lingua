@@ -31,7 +31,7 @@ sealed class Screen {
     data class Failed(val retry: () -> Unit) : Screen()
 }
 
-enum class Tab { LEARN, STATS }
+enum class Tab { LEARN, STATS, SETTINGS }
 
 /** State of a running lesson or practice session. */
 class LessonSession(
@@ -156,10 +156,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun difficulty(c: Course, skill: Skill) = ProgressLogic.difficulty(state.value.progress, c, skill)
 
-    fun startLesson(skill: Skill, lesson: Int) {
+    /** The lesson the learner should do next: first unlocked unit that isn't finished. */
+    fun nextLesson(c: Course): Pair<Skill, Int>? {
+        val p = state.value.progress
+        val skill = c.skills.firstOrNull { ProgressLogic.rowOpen(p, c, it.row) && !ProgressLogic.isDone(p, c, it) } ?: return null
+        return skill to p.skill(c.id, skill.id).lessons
+    }
+
+    /** Finished units that are fading and should be reviewed. */
+    fun weakSkills(c: Course): List<Skill> {
+        val p = state.value.progress
+        return c.skills.filter { ProgressLogic.isDone(p, c, it) && ProgressLogic.strength(p, c, it) < 4 }
+    }
+
+    /** [ease] lowers the difficulty, e.g. for a retry after running out of hearts. */
+    fun startLesson(skill: Skill, lesson: Int, ease: Double = 0.0) {
         val c = state.value.course ?: return
         audio.setLanguage(c.tts)
-        val d = difficulty(c, skill)
+        val d = (difficulty(c, skill) - ease).coerceAtLeast(0.0)
         val list = builder(c).lesson(skill, lesson, listening(c), d)
         screen = Screen.Lesson(LessonSession(c, indexFor(c), list, skill.id, lesson, emptyList(), d))
     }
@@ -212,11 +226,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun next(s: LessonSession) {
         if (s.failed) {
             screen = Screen.Failed {
+                // The retry is a bit easier than the attempt that failed.
                 if (s.isPractice) {
-                    val c = s.course
-                    startPracticeSkills(c, s.practiceSkills)
+                    startPracticeSkills(s.course, s.practiceSkills, ease = 0.3)
                 } else {
-                    s.course.skill(s.skillId!!)?.let { startLesson(it, s.lessonIndex!!) }
+                    s.course.skill(s.skillId!!)?.let { startLesson(it, s.lessonIndex!!, ease = 0.3) }
                 }
             }
             return
@@ -229,10 +243,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         s.position++
     }
 
-    private fun startPracticeSkills(c: Course, ids: List<String>) {
+    private fun startPracticeSkills(c: Course, ids: List<String>, ease: Double = 0.0) {
         val skills = ids.mapNotNull { c.skill(it) }
         if (skills.isEmpty()) return
-        val d = skills.map { difficulty(c, it) }.average()
+        val d = (skills.map { difficulty(c, it) }.average() - ease).coerceAtLeast(0.0)
         val list = builder(c).practice(skills, listening(c), d)
         screen = Screen.Lesson(LessonSession(c, indexFor(c), list, null, null, ids, d))
     }

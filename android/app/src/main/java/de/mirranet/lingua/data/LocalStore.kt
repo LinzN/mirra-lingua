@@ -30,6 +30,11 @@ class LocalStore(context: Context) {
         get() = prefs.getString("username", null)
         set(v) = prefs.edit().putString("username", v).apply()
 
+    /** Device-only accessibility option: 20 % larger text. */
+    var largeText: Boolean
+        get() = prefs.getBoolean("large_text", false)
+        set(v) = prefs.edit().putBoolean("large_text", v).apply()
+
     /** Settings changed while offline and not yet sent to the server. */
     var settingsDirty: Boolean
         get() = prefs.getBoolean("settings_dirty", false)

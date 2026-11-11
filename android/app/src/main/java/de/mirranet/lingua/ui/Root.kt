@@ -57,20 +57,21 @@ fun LinguaRoot(vm: AppViewModel) {
 @Composable
 private fun WaitingForContent(vm: AppViewModel, offline: Boolean, syncing: Boolean) {
     Column(
-        Modifier.fillMaxSize().background(Color.White).padding(32.dp),
+        Modifier.fillMaxSize().background(Ios.GroupedBackground).padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
         if (syncing) {
-            CircularProgressIndicator(color = Palette.Green)
+            CircularProgressIndicator(color = Ios.Blue)
             Spacer(Modifier.height(20.dp))
-            Text("Kurse werden geladen …", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text("Kurse werden geladen …", style = IosType.Headline)
         } else {
             Text(if (offline) "📡" else "⚠️", fontSize = 56.sp)
-            Text(if (offline) "Keine Verbindung" else "Kurse konnten nicht geladen werden", fontWeight = FontWeight.Black, fontSize = 22.sp, modifier = Modifier.padding(top = 12.dp))
+            Text(if (offline) "Keine Verbindung" else "Kurse konnten nicht geladen werden", style = IosType.Title2,
+                textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
             Text(if (offline) "Die Kursinhalte kommen vom Server. Verbinde dich einmal mit dem Internet, danach geht es auch offline."
                 else "Der Server hat keine Kurse geliefert. Versuch es gleich noch einmal.",
-                color = Palette.Muted, textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 12.dp))
-            ChunkyButton("Erneut versuchen", { vm.sync() }, Modifier.fillMaxWidth())
+                style = IosType.Callout, color = Ios.SecondaryLabel, textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 12.dp))
+            IosButton("Erneut versuchen", { vm.sync() }, Modifier.fillMaxWidth())
         }
     }
 }
