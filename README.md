@@ -3,7 +3,8 @@
 A language learning app in the spirit of the *early* Duolingo: a skill tree, short lessons with three hearts,
 strength bars that fade and ask for review – and nothing else. No ads, no gems, no leagues.
 
-The first courses are **English** and **French** for German speakers.
+The first courses are **English** and **French** for German speakers, each with 21 units from A1 to B1
+(numbers, colours, time, weather, city, questions, restaurant, free time, past and future tense, travel, work …).
 
 ```
 mirra-lingua/
@@ -21,6 +22,13 @@ mirra-lingua/
   cached for offline use. Editing a file in the server's content folder is enough – no app update, no server restart.
 * **Accounts.** Username + password (PBKDF2-SHA256), random bearer tokens that are stored only as SHA-256 hashes,
   rate-limited login, password change (signs out other devices) and account deletion.
+* **Adaptive difficulty.** Every finished session reports how many answers were right. The server keeps a running
+  accuracy per skill (an exponential moving average). From it the app derives a difficulty between 0 and 1. A new
+  skill also takes the learner's results in the rest of the course into account. Low difficulty means more
+  recognition: word banks into German, multiple choice with clearly wrong options, few chips, little review.
+  High difficulty means new sentences often skip the recognition step, with more free typing and listening, chips
+  with look-alike words from the same unit, confusable options and more review. Inside a session, two mistakes
+  in a row make the next exercises easier, and four correct answers in a row make them harder.
 * **Progress sync.** Finishing a lesson creates an event with a random id. Events are applied locally right away
   (works offline) and uploaded in the background. The server applies each id at most once, so retries are safe,
   and returns the authoritative progress snapshot.
@@ -60,12 +68,16 @@ Run it behind a TLS reverse proxy – see [`deploy/nginx-lingua.conf`](deploy/ng
 | POST | `/api/progress/events` | ✓ | `{events: [...]}` → `{applied, duplicates, rejected, progress}` |
 
 Event types: `lesson` (`skill`, `lesson`, `xp`, `day`, `at`), `practice` (`skills`, `xp`, `day`, `at`) and
-`reset` (clears one course). XP per event is capped at 30.
+`reset` (clears one course). Lessons and practice sessions may carry `correct` and `total` (graded answers,
+at most 100), which update the per-skill `accuracy` (0..1) and `answers` in the progress snapshot. XP per event
+is capped at 30.
 
 ## Adding or changing content
 
 Course files live in the server's `contentDir` (default `content/`). The server checks for changes every few
-seconds; an invalid file is logged and ignored while the previous version stays online. See
+seconds; an invalid file is logged and ignored while the previous version stays online. The bundled courses are
+only copied into an *empty* content folder on first start – after updating the repository, copy the new
+`content/courses/*.json` to the server (or let the Jenkins "Publish content" stage do it). See
 [`content/README.md`](content/README.md) for the format.
 
 ## Android app

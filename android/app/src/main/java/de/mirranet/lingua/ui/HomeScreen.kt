@@ -22,7 +22,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -136,19 +136,44 @@ private fun SkillTree(vm: AppViewModel, st: AppState, course: Course) {
                 }
             }
         }
-        items(course.rows) { row ->
+        itemsIndexed(course.rows) { i, row ->
             val unlocked = ProgressLogic.rowOpen(p, course, row)
-            Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), horizontalArrangement = Arrangement.Center) {
-                course.skills.filter { it.row == row }.forEachIndexed { i, skill ->
-                    if (i > 0) Spacer(Modifier.width(26.dp))
-                    SkillNode(skill, unlocked, p.skill(course.id, skill.id).lessons,
-                        ProgressLogic.strength(p, course, skill)) { open = skill }
+            // A heading wherever a new level starts (A1 → A2 → B1).
+            val level = course.skills.firstOrNull { it.row == row }?.level
+            val previous = if (i > 0) course.skills.firstOrNull { it.row == course.rows[i - 1] }?.level else null
+            Column(Modifier.fillMaxWidth()) {
+                if (level != null && level != previous) LevelHeading(level, first = i == 0)
+                Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), horizontalArrangement = Arrangement.Center) {
+                    course.skills.filter { it.row == row }.forEachIndexed { j, skill ->
+                        if (j > 0) Spacer(Modifier.width(26.dp))
+                        SkillNode(skill, unlocked, p.skill(course.id, skill.id).lessons,
+                            ProgressLogic.strength(p, course, skill)) { open = skill }
+                    }
                 }
             }
         }
         item { Spacer(Modifier.height(40.dp)) }
     }
     open?.let { SkillSheet(vm, st, course, it) { open = null } }
+}
+
+@Composable
+private fun LevelHeading(level: String, first: Boolean) {
+    val name = when (level.uppercase()) {
+        "A1" -> "Einstieg"
+        "A2" -> "Grundlagen"
+        "B1" -> "Fortgeschritten"
+        "B2" -> "Selbstständig"
+        else -> null
+    }
+    Row(Modifier.fillMaxWidth().padding(top = if (first) 12.dp else 22.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f).height(2.dp).background(Palette.Gray))
+        Text(
+            if (name != null) "Stufe $level · $name" else "Stufe $level",
+            Modifier.padding(horizontal = 12.dp), color = Palette.GrayDark, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp,
+        )
+        Box(Modifier.weight(1f).height(2.dp).background(Palette.Gray))
+    }
 }
 
 @Composable
@@ -202,7 +227,18 @@ private fun SkillSheet(vm: AppViewModel, st: AppState, course: Course, skill: Sk
                 }
                 else -> "Lektion ${sp.lessons + 1} von ${skill.lessonCount}"
             }
-            Text(info, color = Palette.Muted, modifier = Modifier.padding(vertical = 8.dp))
+            Text(info, color = Palette.Muted, modifier = Modifier.padding(top = 8.dp))
+            if (unlocked) {
+                val d = vm.difficulty(course, skill)
+                val details = listOfNotNull(
+                    skill.level?.let { "Stufe $it" },
+                    "Schwierigkeit: ${ProgressLogic.difficultyLabel(d)}",
+                    if (sp.answers > 0) "${(sp.accuracy * 100).toInt()} % richtig" else null,
+                ).joinToString(" · ")
+                Text(details, color = Palette.BlueDark, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
+                Text("Die Aufgaben passen sich deinen Antworten an.", color = Palette.Muted, fontSize = 13.sp)
+            }
+            Spacer(Modifier.height(10.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 skill.words.forEach { (t, d) ->
                     Text("$t – $d", Modifier.clip(RoundedCornerShape(10.dp)).background(Color(0xFFF7F7F7))

@@ -237,15 +237,16 @@ class Repository(context: Context) {
     private fun today() = LocalDate.now().toString()
 
     /** @return the XP awarded. */
-    fun completeLesson(course: String, skill: String, lesson: Int, heartsLeft: Int): Int {
+    /** [correct]/[total] are the session's graded answers; they drive the adaptive difficulty. */
+    fun completeLesson(course: String, skill: String, lesson: Int, heartsLeft: Int, correct: Int, total: Int): Int {
         val xp = ProgressLogic.lessonXp(heartsLeft)
-        record(LearnEvent.Lesson(newId(), course, skill, lesson, xp, today(), System.currentTimeMillis()))
+        record(LearnEvent.Lesson(newId(), course, skill, lesson, xp, today(), System.currentTimeMillis(), correct, total))
         return xp
     }
 
-    fun completePractice(course: String, skills: List<String>): Int {
+    fun completePractice(course: String, skills: List<String>, correct: Int, total: Int): Int {
         val xp = ProgressLogic.BASE_XP
-        record(LearnEvent.Practice(newId(), course, skills, xp, today(), System.currentTimeMillis()))
+        record(LearnEvent.Practice(newId(), course, skills, xp, today(), System.currentTimeMillis(), correct, total))
         return xp
     }
 

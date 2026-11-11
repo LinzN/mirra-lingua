@@ -27,10 +27,14 @@ object ProgressLogic {
                 var last = old.lastPracticed
                 if (!wasDone && lessons >= total) reps = max(1, reps) else if (wasDone) reps++
                 if (lessons >= total) last = max(last, e.at)
-                skills[e.skill] = SkillProgress(lessons, last, reps)
+                val (acc, answers) = blend(old.accuracy, old.answers, e.correct, e.total)
+                skills[e.skill] = SkillProgress(lessons, last, reps, acc, answers)
             }
             is LearnEvent.Practice -> e.skills.forEach { id ->
-                skills[id]?.let { skills[id] = it.copy(lastPracticed = max(it.lastPracticed, e.at), reps = it.reps + 1) }
+                skills[id]?.let {
+                    val (acc, answers) = blend(it.accuracy, it.answers, e.correct, e.total)
+                    skills[id] = it.copy(lastPracticed = max(it.lastPracticed, e.at), reps = it.reps + 1, accuracy = acc, answers = answers)
+                }
             }
             is LearnEvent.Reset -> return p.copy(courses = p.courses - e.course)
         }
@@ -67,4 +71,47 @@ object ProgressLogic {
     }
 
     fun lessonXp(heartsLeft: Int) = BASE_XP + heartsLeft
+
+    // ------------------------------------------------------------------ adaptive difficulty
+
+    /** Weight of the newest session in the running accuracy. Must match the server's ProgressService. */
+    const val ACCURACY_WEIGHT = 0.35
+
+    fun blend(accuracy: Double, answers: Int, correct: Int, total: Int): Pair<Double, Int> {
+        if (total <= 0) return accuracy to answers
+        val session = correct.toDouble() / total
+        val next = if (answers == 0) session else accuracy * (1 - ACCURACY_WEIGHT) + session * ACCURACY_WEIGHT
+        return next to min(1_000_000, answers + total)
+    }
+
+    /** Assumed accuracy before we know anything about the learner. */
+    private const val PRIOR_ACCURACY = 0.75
+    /** How many answers the prior is "worth" when mixing it with real data. */
+    private const val PRIOR_WEIGHT = 10.0
+
+    /**
+     * Estimated accuracy for [skill]: its own history, backed by the learner's results in the rest of
+     * the course, so a confident learner also gets harder exercises in a brand-new unit.
+     */
+    fun estimatedAccuracy(p: Progress, course: Course, skill: Skill): Double {
+        val all = p.courses[course.id].orEmpty().values.filter { it.answers > 0 }
+        val n = all.sumOf { it.answers }.toDouble()
+        val courseEstimate = (all.sumOf { it.accuracy * it.answers } + PRIOR_ACCURACY * PRIOR_WEIGHT) / (n + PRIOR_WEIGHT)
+        val own = p.skill(course.id, skill.id)
+        return (own.accuracy * own.answers + courseEstimate * PRIOR_WEIGHT) / (own.answers + PRIOR_WEIGHT)
+    }
+
+    /**
+     * Difficulty 0..1 for building exercises: 0 = lots of recognition and help, 1 = mostly free typing
+     * and listening with tricky distractors. Learners above ~95 % accuracy get the hardest mix,
+     * below ~65 % the gentlest.
+     */
+    fun difficulty(p: Progress, course: Course, skill: Skill): Double =
+        ((estimatedAccuracy(p, course, skill) - 0.65) / 0.30).coerceIn(0.0, 1.0)
+
+    fun difficultyLabel(d: Double) = when {
+        d < 0.34 -> "Leicht"
+        d < 0.67 -> "Mittel"
+        else -> "Schwer"
+    }
 }

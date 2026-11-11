@@ -18,6 +18,8 @@ data class Skill(
     val words: List<Pair<String, String>>,
     val sentences: List<Sentence>,
     val lessonSize: Int,
+    /** CEFR-style label from the course file, e.g. "A1", "A2", "B1" (optional). */
+    val level: String? = null,
 ) {
     val lessonCount: Int get() = (sentences.size + lessonSize - 1) / lessonSize
     fun lessonSentences(index: Int): List<Sentence> =
@@ -45,7 +47,17 @@ data class Course(
     val allSentences: List<Sentence> by lazy { skills.flatMap { it.sentences } }
 }
 
-data class SkillProgress(val lessons: Int = 0, val lastPracticed: Long = 0, val reps: Int = 0)
+/**
+ * @param accuracy share of correct answers (0..1), weighted towards recent sessions
+ * @param answers  number of graded answers so far; 0 means "no data yet"
+ */
+data class SkillProgress(
+    val lessons: Int = 0,
+    val lastPracticed: Long = 0,
+    val reps: Int = 0,
+    val accuracy: Double = 0.0,
+    val answers: Int = 0,
+)
 
 /** Learner state: course -> skill -> progress, plus XP per local day ("yyyy-MM-dd"). */
 data class Progress(
@@ -64,14 +76,17 @@ sealed class LearnEvent {
     abstract val day: String
     abstract val at: Long
 
+    /** [correct]/[total]: graded answers of the session, used to adapt difficulty. */
     data class Lesson(
         override val id: String, override val course: String, val skill: String, val lesson: Int,
         override val xp: Int, override val day: String, override val at: Long,
+        val correct: Int = 0, val total: Int = 0,
     ) : LearnEvent()
 
     data class Practice(
         override val id: String, override val course: String, val skills: List<String>,
         override val xp: Int, override val day: String, override val at: Long,
+        val correct: Int = 0, val total: Int = 0,
     ) : LearnEvent()
 
     data class Reset(

@@ -368,8 +368,11 @@ fun ResultScreen(vm: AppViewModel, r: Screen.Result, streak: Int, todayXp: Int, 
         Text(if (r.goalReached) "🏆" else "🎉", fontSize = 72.sp)
         Text(r.title, fontSize = 28.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
         r.detail?.let { Text(it, color = Palette.Muted, fontSize = 17.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp)) }
-        Text(if (r.mistakes == 0) "Ohne einen einzigen Fehler!" else "${r.mistakes} Fehler", color = Palette.Muted, fontSize = 17.sp,
-            modifier = Modifier.padding(top = 4.dp))
+        Text(
+            (if (r.mistakes == 0) "Ohne einen einzigen Fehler!" else "${r.mistakes} Fehler") +
+                    (r.accuracy?.let { " · $it % richtig" } ?: ""),
+            color = Palette.Muted, fontSize = 17.sp, modifier = Modifier.padding(top = 4.dp),
+        )
         Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Pill("+${r.xp} XP")
             Pill("🔥 $streak ${if (streak == 1) "Tag" else "Tage"}")

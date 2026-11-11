@@ -23,7 +23,11 @@ sealed class Screen {
     data object Home : Screen()
     data object CoursePicker : Screen()
     data class Lesson(val session: LessonSession) : Screen()
-    data class Result(val title: String, val detail: String?, val xp: Int, val mistakes: Int, val goalReached: Boolean) : Screen()
+    data class Result(
+        val title: String, val detail: String?, val xp: Int, val mistakes: Int, val goalReached: Boolean,
+        /** Share of correct answers in percent, null if nothing was graded. */
+        val accuracy: Int?,
+    ) : Screen()
     data class Failed(val retry: () -> Unit) : Screen()
 }
 
@@ -38,6 +42,8 @@ class LessonSession(
     val skillId: String?,
     val lessonIndex: Int?,
     val practiceSkills: List<String>,
+    /** Difficulty the session was built with (0..1); see ProgressLogic.difficulty. */
+    val difficulty: Double,
 ) {
     var exercises by mutableStateOf(exercises)
     var position by mutableIntStateOf(0)
@@ -46,6 +52,13 @@ class LessonSession(
     /** Null while answering; set after "Überprüfen". */
     var feedback by mutableStateOf<Feedback?>(null)
     var failed = false
+
+    /** Graded answers (match exercises are not graded). */
+    var answered = 0
+    var correctAnswers = 0
+    /** Runs of right/wrong answers, used to adjust the upcoming exercises during the session. */
+    var rightInARow = 0
+    var wrongInARow = 0
 
     val current: Exercise get() = exercises[position]
     val isPractice get() = skillId == null
@@ -141,11 +154,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return state.value.settings.listen && audio.available
     }
 
+    fun difficulty(c: Course, skill: Skill) = ProgressLogic.difficulty(state.value.progress, c, skill)
+
     fun startLesson(skill: Skill, lesson: Int) {
         val c = state.value.course ?: return
         audio.setLanguage(c.tts)
-        val list = builder(c).lesson(skill, lesson, listening(c))
-        screen = Screen.Lesson(LessonSession(c, indexFor(c), list, skill.id, lesson, emptyList()))
+        val d = difficulty(c, skill)
+        val list = builder(c).lesson(skill, lesson, listening(c), d)
+        screen = Screen.Lesson(LessonSession(c, indexFor(c), list, skill.id, lesson, emptyList(), d))
     }
 
     /** Practice one skill, or the weakest finished ones when [skill] is null. */
@@ -157,8 +173,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             .take(3)
         if (skills.isEmpty()) return
         audio.setLanguage(c.tts)
-        val list = builder(c).practice(skills, listening(c))
-        screen = Screen.Lesson(LessonSession(c, indexFor(c), list, null, null, skills.map { it.id }))
+        startPracticeSkills(c, skills.map { it.id })
     }
 
     /** Grades the current exercise. [answer] is typed text or the assembled chips; [choice] for options. */
@@ -177,6 +192,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!grade.correct) {
             s.mistakes++
             if (s.hearts == 0) s.failed = true else s.hearts--
+        }
+        if (ex !is Exercise.Match) {
+            s.answered++
+            if (grade.correct) s.correctAnswers++
+            adapt(s, grade.correct)
         }
         audio.feedback(grade.correct, state.value.settings.sound)
         val spokenAnswer = when (ex) {
@@ -211,8 +231,30 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun startPracticeSkills(c: Course, ids: List<String>) {
         val skills = ids.mapNotNull { c.skill(it) }
-        val list = builder(c).practice(skills, listening(c))
-        screen = Screen.Lesson(LessonSession(c, indexFor(c), list, null, null, ids))
+        if (skills.isEmpty()) return
+        val d = skills.map { difficulty(c, it) }.average()
+        val list = builder(c).practice(skills, listening(c), d)
+        screen = Screen.Lesson(LessonSession(c, indexFor(c), list, null, null, ids, d))
+    }
+
+    /**
+     * In-session adaptation: two mistakes in a row make the next exercises easier, four correct answers
+     * in a row make the next ones harder. The long-term level comes from the accuracy stored per skill.
+     */
+    private fun adapt(s: LessonSession, correct: Boolean) {
+        if (correct) {
+            s.wrongInARow = 0
+            if (++s.rightInARow >= 4) {
+                s.exercises = builder(s.course).adjust(s.exercises, s.position + 1, harder = true, count = 2)
+                s.rightInARow = 0
+            }
+        } else {
+            s.rightInARow = 0
+            if (++s.wrongInARow >= 2) {
+                s.exercises = builder(s.course).adjust(s.exercises, s.position + 1, harder = false, count = 3)
+                s.wrongInARow = 0
+            }
+        }
     }
 
     /** "Can't listen now": turn this session's listening exercises into word-bank exercises. */
@@ -227,13 +269,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         var detail: String? = null
         val xp: Int
         if (s.isPractice) {
-            xp = repo.completePractice(c.id, s.practiceSkills)
+            xp = repo.completePractice(c.id, s.practiceSkills, s.correctAnswers, s.answered)
             title = "Training abgeschlossen!"
             detail = "Deine Fertigkeiten sind wieder voll aufgeladen."
         } else {
             val skill = c.skill(s.skillId!!)!!
             val wasDone = ProgressLogic.isDone(state.value.progress, c, skill)
-            xp = repo.completeLesson(c.id, skill.id, s.lessonIndex!!, s.hearts)
+            xp = repo.completeLesson(c.id, skill.id, s.lessonIndex!!, s.hearts, s.correctAnswers, s.answered)
             val nowDone = ProgressLogic.isDone(state.value.progress, c, skill)
             if (!wasDone && nowDone) {
                 title = "Fertigkeit gemeistert!"
@@ -243,7 +285,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         val goal = state.value.settings.goal
-        screen = Screen.Result(title, detail, xp, s.mistakes, before < goal && before + xp >= goal)
+        val accuracy = if (s.answered > 0) (100 * s.correctAnswers / s.answered) else null
+        screen = Screen.Result(title, detail, xp, s.mistakes, before < goal && before + xp >= goal, accuracy)
     }
 
     fun quitLesson() {

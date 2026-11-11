@@ -39,8 +39,10 @@ class EngineTest {
             val index = CourseIndex(c)
             repeat(10) { seed ->
                 val builder = LessonBuilder(index, Random(seed))
+                val d = seed / 9.0
                 for (skill in c.skills) for (l in 0 until skill.lessonCount) {
-                    for (e in builder.lesson(skill, l, listening = true) + builder.practice(listOf(skill), true)) {
+                    val list = builder.lesson(skill, l, listening = true, difficulty = d) + builder.practice(listOf(skill), true, d)
+                    for (e in builder.adjust(list, 1, harder = seed % 2 == 0, count = 5)) {
                         when (e) {
                             is Exercise.Bank -> {
                                 val chips = e.chips.map { it.lowercase() }.toMutableList()
@@ -80,6 +82,34 @@ class EngineTest {
     }
 
     @Test
+    fun difficultyFollowsAccuracy() {
+        val c = course("en")
+        val g1 = c.skill("g1")!!
+        val fresh = c.skill("tra")!!
+        assertEquals("Leicht", ProgressLogic.difficultyLabel(ProgressLogic.difficulty(Progress(), c, fresh)))
+
+        var strong = Progress()
+        for (l in 0 until 3) strong = ProgressLogic.apply(strong, LearnEvent.Lesson("s$l", "en", "g1", l, 13, "2026-11-11", 1, 20, 20), c)
+        assertTrue(ProgressLogic.difficulty(strong, c, g1) > 0.85)
+        assertTrue("fresh units inherit the course level", ProgressLogic.difficulty(strong, c, fresh) > 0.6)
+
+        var weak = Progress()
+        for (l in 0 until 3) weak = ProgressLogic.apply(weak, LearnEvent.Lesson("w$l", "en", "g1", l, 10, "2026-11-11", 1, 9, 20), c)
+        assertTrue(ProgressLogic.difficulty(weak, c, g1) < 0.1)
+
+        // Harder sessions contain clearly more free production.
+        val index = CourseIndex(c)
+        fun typedShare(d: Double): Double {
+            val all = (0 until 50).flatMap { seed -> c.skills.flatMap { LessonBuilder(index, Random(seed)).lesson(it, 1, true, d) } }
+            return all.count { it is Exercise.Type || it is Exercise.Listen }.toDouble() / all.size
+        }
+        assertTrue(typedShare(1.0) > 2 * typedShare(0.0))
+
+        // Same formula as the server (ProgressService.blend).
+        assertEquals(0.87, ProgressLogic.blend(0.8, 10, 10, 10).first, 1e-9)
+    }
+
+    @Test
     fun streak() {
         val today = LocalDate.parse("2026-11-11")
         assertEquals(2, ProgressLogic.streak(mapOf("2026-11-10" to 5, "2026-11-09" to 3), today))
@@ -90,8 +120,8 @@ class EngineTest {
     @Test
     fun eventsRoundTrip() {
         val events = listOf(
-            LearnEvent.Lesson("a1b2c3d4", "fr", "g1", 2, 13, "2026-11-11", 5),
-            LearnEvent.Practice("e5f6g7h8", "fr", listOf("g1", "g2"), 10, "2026-11-11", 6),
+            LearnEvent.Lesson("a1b2c3d4", "fr", "g1", 2, 13, "2026-11-11", 5, 7, 9),
+            LearnEvent.Practice("e5f6g7h8", "fr", listOf("g1", "g2"), 10, "2026-11-11", 6, 10, 10),
             LearnEvent.Reset("i9j0k1l2", "fr", "2026-11-11", 7),
         )
         assertEquals(events, Codec.parseEvents(Codec.eventsJson(events)))

@@ -38,6 +38,7 @@ object Codec {
                 words = words,
                 sentences = sentences,
                 lessonSize = lessonSize,
+                level = s.optString("level", "").ifEmpty { null },
             )
         }
         return Course(
@@ -101,7 +102,10 @@ object Codec {
                 val sj = cs.getJSONObject(cid)
                 sj.keys().forEach { sid ->
                     val p = sj.getJSONObject(sid)
-                    skills[sid] = SkillProgress(p.optInt("lessons"), p.optLong("lastPracticed"), p.optInt("reps"))
+                    skills[sid] = SkillProgress(
+                        p.optInt("lessons"), p.optLong("lastPracticed"), p.optInt("reps"),
+                        p.optDouble("accuracy", 0.0), p.optInt("answers"),
+                    )
                 }
                 courses[cid] = skills
             }
@@ -116,7 +120,8 @@ object Codec {
         p.courses.forEach { (cid, skills) ->
             val sj = JSONObject()
             skills.forEach { (sid, s) ->
-                sj.put(sid, JSONObject().put("lessons", s.lessons).put("lastPracticed", s.lastPracticed).put("reps", s.reps))
+                sj.put(sid, JSONObject().put("lessons", s.lessons).put("lastPracticed", s.lastPracticed).put("reps", s.reps)
+                    .put("accuracy", s.accuracy).put("answers", s.answers))
             }
             courses.put(cid, sj)
         }
@@ -131,9 +136,9 @@ object Codec {
         val o = JSONObject().put("id", e.id).put("course", e.course).put("at", e.at)
         when (e) {
             is LearnEvent.Lesson -> o.put("type", "lesson").put("skill", e.skill).put("lesson", e.lesson)
-                .put("xp", e.xp).put("day", e.day)
+                .put("xp", e.xp).put("day", e.day).put("correct", e.correct).put("total", e.total)
             is LearnEvent.Practice -> o.put("type", "practice").put("skills", JSONArray(e.skills))
-                .put("xp", e.xp).put("day", e.day)
+                .put("xp", e.xp).put("day", e.day).put("correct", e.correct).put("total", e.total)
             is LearnEvent.Reset -> o.put("type", "reset").put("day", e.day)
         }
         return o
@@ -145,8 +150,10 @@ object Codec {
         val at = o.optLong("at")
         val day = o.optString("day")
         return when (o.optString("type")) {
-            "lesson" -> LearnEvent.Lesson(id, course, o.getString("skill"), o.getInt("lesson"), o.getInt("xp"), day, at)
-            "practice" -> LearnEvent.Practice(id, course, strings(o.getJSONArray("skills")), o.getInt("xp"), day, at)
+            "lesson" -> LearnEvent.Lesson(id, course, o.getString("skill"), o.getInt("lesson"), o.getInt("xp"), day, at,
+                o.optInt("correct"), o.optInt("total"))
+            "practice" -> LearnEvent.Practice(id, course, strings(o.getJSONArray("skills")), o.getInt("xp"), day, at,
+                o.optInt("correct"), o.optInt("total"))
             "reset" -> LearnEvent.Reset(id, course, day, at)
             else -> null
         }
