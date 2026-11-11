@@ -5,6 +5,13 @@ plugins {
 }
 
 val serverUrl = (findProperty("mirraLinguaServer") as String?) ?: "https://lingua.mirranet.de"
+val appVersionName = "1.2.0"
+val appVersionCode = 3
+
+// APK file name: MirraLingua-<version>-<buildType>.apk (e.g. MirraLingua-1.2.0-release.apk)
+base {
+    archivesName.set("MirraLingua-$appVersionName")
+}
 
 android {
     namespace = "de.mirranet.lingua"
@@ -14,8 +21,8 @@ android {
         applicationId = "de.mirranet.lingua"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
         buildConfigField("String", "DEFAULT_SERVER_URL", "\"$serverUrl\"")
     }
 
