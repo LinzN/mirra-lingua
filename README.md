@@ -6,6 +6,16 @@ bars that fade and ask for review – and nothing else. No ads, no gems, no leag
 The first courses are **English** and **French** for German speakers, each with 21 units from A1 to B1
 (numbers, colours, time, weather, city, questions, restaurant, free time, past and future tense, travel, work …).
 
+![Parla – Lernen, Übung und Fortschritt](docs/screenshots/overview.png)
+
+| Anmelden | Lernen | Übung |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/login.png" width="240" alt="Login"> | <img src="docs/screenshots/learn.png" width="240" alt="Lernen"> | <img src="docs/screenshots/lesson.png" width="240" alt="Übung mit Wortbausteinen"> |
+| **Rückmeldung** | **Fortschritt** | **Einstellungen** |
+| <img src="docs/screenshots/lesson-correct.png" width="240" alt="Richtige Antwort"> | <img src="docs/screenshots/progress.png" width="240" alt="Fortschritt"> | <img src="docs/screenshots/settings.png" width="240" alt="Einstellungen"> |
+
+<sub>Design previews rendered from the app's colours, type scale and layout; screenshots from a real device may differ in small details.</sub>
+
 ```
 parla/
 ├── content/courses/   Course files (en.json, fr.json) – the single source of lesson content
