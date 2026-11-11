@@ -11,7 +11,7 @@ mirra-lingua/
 ├── content/courses/   Course files (en.json, fr.json) – the single source of lesson content
 ├── server/            Rust backend: accounts, course delivery, progress sync (SQLite)
 ├── android/           Android app (Kotlin + Jetpack Compose)
-├── deploy/            systemd unit and nginx example
+├── deploy/            nginx example
 └── Jenkinsfile        Builds the server JAR and the APK
 ```
 
@@ -49,8 +49,29 @@ The result is a single binary with the course files built in. On first start it 
 into `content/`. Defaults: listens on `127.0.0.1:8085`, registration open, sessions expire after 180 days
 without use. Set `RUST_LOG=debug` for more log output.
 
-Run it behind a TLS reverse proxy – see [`deploy/nginx-lingua.conf`](deploy/nginx-lingua.conf) and
-[`deploy/mirra-lingua.service`](deploy/mirra-lingua.service). Back up the `data/` folder; that is all the state.
+### Debian package
+
+```bash
+cd server
+packaging/build-deb.sh          # -> target/debian/mirra-lingua-server_<version>_<arch>.deb
+sudo apt install ./target/debian/mirra-lingua-server_*.deb
+```
+
+Jenkins builds the package on every run. It installs:
+
+| Path | What |
+|---|---|
+| `/usr/bin/mirra-lingua-server` | the server (courses built in) |
+| `/etc/mirra-lingua/mirra-lingua.toml` | configuration (kept on upgrades) |
+| `/var/lib/mirra-lingua/` | database and `content/` course files – back this up |
+| `mirra-lingua.service` | systemd service, enabled and started on install, restarted on upgrade |
+
+The service runs as the system user `mirra-lingua` on `127.0.0.1:8085`. Logs: `journalctl -u mirra-lingua`.
+`apt remove` keeps data and config; `apt purge` deletes both and the user. The binary needs glibc 2.34+
+(Debian 12, Ubuntu 22.04 or newer).
+
+Put a TLS reverse proxy in front of it – see [`deploy/nginx-lingua.conf`](deploy/nginx-lingua.conf)
+(also installed to `/usr/share/doc/mirra-lingua-server/examples/`).
 
 ### API
 
@@ -78,8 +99,9 @@ is capped at 30.
 
 Course files live in the server's `contentDir` (default `content/`). The server checks for changes every few
 seconds; an invalid file is logged and ignored while the previous version stays online. The built-in courses are
-only copied into an *empty* content folder on first start – after updating the repository, copy the new
-`content/courses/*.json` to the server (or let the Jenkins "Publish content" stage do it). See
+only copied into an *empty* content folder on first start, so a package upgrade never overwrites your course
+files – after updating the repository, copy the new `content/courses/*.json` to the server's content folder
+(`/var/lib/mirra-lingua/content` for the package), or let the Jenkins "Publish content" stage do it. See
 [`content/README.md`](content/README.md) for the format.
 
 ## Android app

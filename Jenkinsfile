@@ -1,5 +1,5 @@
-// Builds the MirraLingua server (Rust binary) and the Android APK.
-// Optional: set LINGUA_CONTENT_TARGET (e.g. "lingua@mirranet.de:/opt/mirra-lingua/content/") to publish
+// Builds the MirraLingua server (Rust binary + Debian package) and the Android APK.
+// Optional: set LINGUA_CONTENT_TARGET (e.g. "root@mirranet.de:/var/lib/mirra-lingua/content/") to publish
 // course files after a successful build – the app picks them up on its next sync.
 pipeline {
     agent any
@@ -18,12 +18,16 @@ pipeline {
                             . ./.build-env
                             cargo test --locked
                             cargo build --release --locked
+                            # Debian package: target/debian/mirra-lingua-server_<version>_<arch>.deb
+                            SKIP_BUILD=1 packaging/build-deb.sh
                         '''
                     }
                 }
             }
             post {
-                success { archiveArtifacts artifacts: 'server/target/release/mirra-lingua-server', fingerprint: true }
+                success {
+                    archiveArtifacts artifacts: 'server/target/debian/*.deb, server/target/release/mirra-lingua-server', fingerprint: true
+                }
             }
         }
         stage('Android') {
