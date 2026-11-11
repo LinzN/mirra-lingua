@@ -40,7 +40,9 @@ pipeline {
                         // Sets up the Android SDK on first run (~/android-sdk unless ANDROID_HOME is set), then builds.
                         sh '''
                             chmod +x gradlew scripts/setup-android-sdk.sh
-                            eval "$(scripts/setup-android-sdk.sh)"
+                            # Provides a JDK Gradle can run on (17-24) and the Android SDK; aborts the build if that fails.
+                            scripts/setup-android-sdk.sh > .build-env
+                            . ./.build-env
                             ./gradlew --no-daemon testDebugUnitTest assembleRelease
                         '''
                     }

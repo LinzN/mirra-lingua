@@ -91,12 +91,13 @@ Open `android/` in Android Studio, or build from the command line (needs a JDK 1
 
 ```bash
 cd android
-eval "$(scripts/setup-android-sdk.sh)"   # installs the Android SDK into ~/android-sdk on first run
+scripts/setup-android-sdk.sh > .build-env && . ./.build-env   # JDK + Android SDK, installed on first run
 ./gradlew testDebugUnitTest assembleRelease
 ```
 
 `setup-android-sdk.sh` reuses an existing SDK if `ANDROID_HOME` is set, accepts the SDK licences and installs
-platform 35 and build tools 35.0.0. Jenkins runs it automatically. The APK ends up in
+platform 35 and build tools 35.0.0. Gradle 8 cannot run on Java 25+, so if the machine's Java is outside 17–24
+the script downloads a Temurin JDK 21 into `~/jdks/temurin-21` and uses it for the Android build only. Jenkins runs it automatically. The APK ends up in
 `android/app/build/outputs/apk/release/`.
 
 The default server address comes from `mirraLinguaServer` in `android/gradle.properties`
