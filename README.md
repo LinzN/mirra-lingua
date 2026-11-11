@@ -35,11 +35,11 @@ mirra-lingua/
 
 ## Server
 
-Requirements: Java 21, Maven.
+Requirements: JDK 21. Maven is not needed – `./mvnw` downloads it on first use.
 
 ```bash
 cd server
-mvn -B package
+./mvnw -B package
 java -jar target/mirra-lingua-server.jar            # reads ./mirra-lingua.properties
 ```
 
@@ -104,7 +104,7 @@ The release build is signed with the debug key so it installs out of the box. Fo
 ## Tests
 
 * `server`: JUnit tests start a real server on a random port against a temporary database
-  (`mvn verify`): accounts, rate limiting, ETags, hot reload of course files, idempotent events, settings,
+  (`./mvnw verify`): accounts, rate limiting, ETags, hot reload of course files, idempotent events, settings,
   password change and account deletion.
 * `android`: `EngineTest` runs the lesson engine against the real course files and checks that every generated
   exercise is solvable and that local progress rules match the server.
