@@ -1,0 +1,23 @@
+# Server
+server/target/
+server/data/
+server/content/
+server/mirra-lingua.properties
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/.kotlin/
+*.iml
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

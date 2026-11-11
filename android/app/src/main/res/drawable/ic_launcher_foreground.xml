@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A simple tree: round crown on a trunk, with a speech-bubble notch. 108dp adaptive icon canvas. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#8B5A2B"
+        android:pathData="M50,58h8v20h-8z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28a18,18 0,1 1,-0.01,0z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,60l-6,10l12,-5z" />
+    <path
+        android:fillColor="#58A700"
+        android:pathData="M47,44h14v4h-14zM47,52h10v4h-10z" />
+</vector>
