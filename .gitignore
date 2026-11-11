@@ -2,7 +2,8 @@
 server/target/
 server/data/
 server/content/
-server/mirra-lingua.properties
+server/mirra-lingua.toml
+server/.build-env
 
 # Android
 android/.gradle/

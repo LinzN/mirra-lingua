@@ -9,7 +9,7 @@ The first courses are **English** and **French** for German speakers, each with 
 ```
 mirra-lingua/
 ├── content/courses/   Course files (en.json, fr.json) – the single source of lesson content
-├── server/            Java 21 backend: accounts, course delivery, progress sync (SQLite)
+├── server/            Rust backend: accounts, course delivery, progress sync (SQLite)
 ├── android/           Android app (Kotlin + Jetpack Compose)
 ├── deploy/            systemd unit and nginx example
 └── Jenkinsfile        Builds the server JAR and the APK
@@ -35,17 +35,19 @@ mirra-lingua/
 
 ## Server
 
-Requirements: JDK 21. Maven is not needed – `./mvnw` downloads it on first use.
+Written in Rust (axum, SQLite via rusqlite with bundled SQLite, Argon2id passwords). Requirements: a Rust
+toolchain and a C compiler. `server/scripts/setup-rust.sh` installs Rust via rustup if `cargo` is missing.
 
 ```bash
 cd server
-./mvnw -B package
-java -jar target/mirra-lingua-server.jar            # reads ./mirra-lingua.properties
+cargo build --release
+./target/release/mirra-lingua-server                 # reads ./mirra-lingua.toml
 ```
 
-On first start the server writes a commented `mirra-lingua.properties`, creates the SQLite database
-(`data/mirra-lingua.db`) and copies the bundled courses into `content/`. Defaults: listens on `127.0.0.1:8085`,
-registration open, sessions expire after 180 days without use.
+The result is a single binary with the course files built in. On first start it writes a commented
+`mirra-lingua.toml`, creates the SQLite database (`data/mirra-lingua.db`) and copies the built-in courses
+into `content/`. Defaults: listens on `127.0.0.1:8085`, registration open, sessions expire after 180 days
+without use. Set `RUST_LOG=debug` for more log output.
 
 Run it behind a TLS reverse proxy – see [`deploy/nginx-lingua.conf`](deploy/nginx-lingua.conf) and
 [`deploy/mirra-lingua.service`](deploy/mirra-lingua.service). Back up the `data/` folder; that is all the state.
@@ -75,7 +77,7 @@ is capped at 30.
 ## Adding or changing content
 
 Course files live in the server's `contentDir` (default `content/`). The server checks for changes every few
-seconds; an invalid file is logged and ignored while the previous version stays online. The bundled courses are
+seconds; an invalid file is logged and ignored while the previous version stays online. The built-in courses are
 only copied into an *empty* content folder on first start – after updating the repository, copy the new
 `content/courses/*.json` to the server (or let the Jenkins "Publish content" stage do it). See
 [`content/README.md`](content/README.md) for the format.
@@ -109,8 +111,9 @@ The release build is signed with the debug key so it installs out of the box. Fo
 
 ## Tests
 
-* `server`: JUnit tests start a real server on a random port against a temporary database
-  (`./mvnw verify`): accounts, rate limiting, ETags, hot reload of course files, idempotent events, settings,
-  password change and account deletion.
+* `server`: `cargo test` – unit tests plus end-to-end tests against the real router with a temporary SQLite
+  database and content folder: accounts, closed registration, rate limiting, ETags, hot reload of course files
+  (including broken and deleted files), idempotent events with accuracy tracking, settings, password change and
+  account deletion.
 * `android`: `EngineTest` runs the lesson engine against the real course files and checks that every generated
   exercise is solvable and that local progress rules match the server.

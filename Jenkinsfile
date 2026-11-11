@@ -1,4 +1,4 @@
-// Builds the MirraLingua server JAR and the Android APK.
+// Builds the MirraLingua server (Rust binary) and the Android APK.
 // Optional: set LINGUA_CONTENT_TARGET (e.g. "lingua@mirranet.de:/opt/mirra-lingua/content/") to publish
 // course files after a successful build – the app picks them up on its next sync.
 pipeline {
@@ -11,26 +11,19 @@ pipeline {
                 // catchError: a failing server build should not stop the Android build (and vice versa).
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     dir('server') {
-                        // The server needs JDK 21+. Fail early with a readable message instead of a compiler error.
+                        // Installs Rust via rustup on first run if cargo is missing (needs a C compiler for SQLite).
                         sh '''
-                            if ! command -v java >/dev/null 2>&1; then
-                              echo "No Java found on this agent. Install a JDK 21 (e.g. apt install openjdk-21-jdk-headless) or set JAVA_HOME." >&2
-                              exit 1
-                            fi
-                            major=$(java -XshowSettings:properties -version 2>&1 | sed -n 's/^ *java.specification.version = //p' | cut -d. -f1)
-                            if [ "${major:-0}" -lt 21 ]; then
-                              echo "Java $major found, but JDK 21 or newer is required. Set JAVA_HOME to a JDK 21 for this job." >&2
-                              exit 1
-                            fi
+                            chmod +x scripts/setup-rust.sh
+                            scripts/setup-rust.sh > .build-env
+                            . ./.build-env
+                            cargo test --locked
+                            cargo build --release --locked
                         '''
-                        // Maven wrapper: downloads Maven on first use, no Maven install needed on the agent.
-                        sh 'chmod +x mvnw && ./mvnw -B clean verify'
                     }
                 }
             }
             post {
-                always { junit allowEmptyResults: true, testResults: 'server/target/surefire-reports/*.xml' }
-                success { archiveArtifacts artifacts: 'server/target/mirra-lingua-server.jar', fingerprint: true }
+                success { archiveArtifacts artifacts: 'server/target/release/mirra-lingua-server', fingerprint: true }
             }
         }
         stage('Android') {
