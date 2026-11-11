@@ -87,12 +87,17 @@ lists on a light grey background, large text and 56 dp touch targets, a bottom t
 Einstellungen), one big "Lektion starten" button for the next lesson, plain-language messages, and an optional
 "Große Schrift" switch that enlarges all text by 20 % on top of the system setting.
 
-Open `android/` in Android Studio, or build from the command line (needs the Android SDK, `ANDROID_HOME` set):
+Open `android/` in Android Studio, or build from the command line (needs a JDK 17+, `unzip` and `curl`/`wget`):
 
 ```bash
 cd android
+eval "$(scripts/setup-android-sdk.sh)"   # installs the Android SDK into ~/android-sdk on first run
 ./gradlew testDebugUnitTest assembleRelease
 ```
+
+`setup-android-sdk.sh` reuses an existing SDK if `ANDROID_HOME` is set, accepts the SDK licences and installs
+platform 35 and build tools 35.0.0. Jenkins runs it automatically. The APK ends up in
+`android/app/build/outputs/apk/release/`.
 
 The default server address comes from `mirraLinguaServer` in `android/gradle.properties`
 (`https://lingua.mirranet.de`) and can be changed on the login screen. Debug builds also allow plain HTTP,

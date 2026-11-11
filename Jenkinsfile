@@ -8,25 +8,24 @@ pipeline {
     stages {
         stage('Server') {
             steps {
-                dir('server') {
-                    // The server needs JDK 21+. Fail early with a readable message instead of a compiler error.
-                    sh '''
-                        if ! command -v java >/dev/null 2>&1; then
-                          echo "No Java found on this agent. Install a JDK 21 (e.g. apt install openjdk-21-jdk-headless) or set JAVA_HOME." >&2
-                          exit 1
-                        fi
-                        major=$(java -XshowSettings:properties -version 2>&1 | sed -n 's/^ *java.specification.version = //p' | cut -d. -f1)
-                        if [ "${major:-0}" -lt 21 ]; then
-                          echo "Java $major found, but JDK 21 or newer is required. Set JAVA_HOME to a JDK 21 for this job." >&2
-                          exit 1
-                        fi
-                        if ! command -v javac >/dev/null 2>&1 && [ -z "$JAVA_HOME" ]; then
-                          echo "Only a JRE was found; Maven needs a full JDK 21 (javac)." >&2
-                          exit 1
-                        fi
-                    '''
-                    // Maven wrapper: downloads Maven on first use, no Maven install needed on the agent.
-                    sh 'chmod +x mvnw && ./mvnw -B clean verify'
+                // catchError: a failing server build should not stop the Android build (and vice versa).
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    dir('server') {
+                        // The server needs JDK 21+. Fail early with a readable message instead of a compiler error.
+                        sh '''
+                            if ! command -v java >/dev/null 2>&1; then
+                              echo "No Java found on this agent. Install a JDK 21 (e.g. apt install openjdk-21-jdk-headless) or set JAVA_HOME." >&2
+                              exit 1
+                            fi
+                            major=$(java -XshowSettings:properties -version 2>&1 | sed -n 's/^ *java.specification.version = //p' | cut -d. -f1)
+                            if [ "${major:-0}" -lt 21 ]; then
+                              echo "Java $major found, but JDK 21 or newer is required. Set JAVA_HOME to a JDK 21 for this job." >&2
+                              exit 1
+                            fi
+                        '''
+                        // Maven wrapper: downloads Maven on first use, no Maven install needed on the agent.
+                        sh 'chmod +x mvnw && ./mvnw -B clean verify'
+                    }
                 }
             }
             post {
@@ -35,10 +34,16 @@ pipeline {
             }
         }
         stage('Android') {
-            when { expression { env.ANDROID_HOME || env.ANDROID_SDK_ROOT } }
             steps {
-                dir('android') {
-                    sh 'chmod +x gradlew && ./gradlew --no-daemon testDebugUnitTest assembleRelease'
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    dir('android') {
+                        // Sets up the Android SDK on first run (~/android-sdk unless ANDROID_HOME is set), then builds.
+                        sh '''
+                            chmod +x gradlew scripts/setup-android-sdk.sh
+                            eval "$(scripts/setup-android-sdk.sh)"
+                            ./gradlew --no-daemon testDebugUnitTest assembleRelease
+                        '''
+                    }
                 }
             }
             post {
@@ -47,7 +52,7 @@ pipeline {
             }
         }
         stage('Publish content') {
-            when { allOf { branch 'main'; expression { env.LINGUA_CONTENT_TARGET } } }
+            when { allOf { branch 'main'; expression { env.LINGUA_CONTENT_TARGET && currentBuild.currentResult == 'SUCCESS' } } }
             steps {
                 sh 'rsync -av --delay-updates content/courses/*.json "$LINGUA_CONTENT_TARGET"'
             }
