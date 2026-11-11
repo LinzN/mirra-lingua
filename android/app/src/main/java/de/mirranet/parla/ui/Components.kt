@@ -1,4 +1,4 @@
-package de.mirranet.lingua.ui
+package de.mirranet.parla.ui
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState

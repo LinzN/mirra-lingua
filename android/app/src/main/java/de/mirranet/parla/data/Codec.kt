@@ -1,11 +1,11 @@
-package de.mirranet.lingua.data
+package de.mirranet.parla.data
 
-import de.mirranet.lingua.engine.Course
-import de.mirranet.lingua.engine.LearnEvent
-import de.mirranet.lingua.engine.Progress
-import de.mirranet.lingua.engine.Sentence
-import de.mirranet.lingua.engine.Skill
-import de.mirranet.lingua.engine.SkillProgress
+import de.mirranet.parla.engine.Course
+import de.mirranet.parla.engine.LearnEvent
+import de.mirranet.parla.engine.Progress
+import de.mirranet.parla.engine.Sentence
+import de.mirranet.parla.engine.Skill
+import de.mirranet.parla.engine.SkillProgress
 import org.json.JSONArray
 import org.json.JSONObject
 

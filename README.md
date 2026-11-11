@@ -1,13 +1,13 @@
-# MirraLingua
+# Parla
 
-A language learning app in the spirit of the *early* Duolingo: a skill tree, short lessons with three hearts,
-strength bars that fade and ask for review – and nothing else. No ads, no gems, no leagues.
+A calm, simple language learning app: units grouped by level, short lessons with three hearts, and strength
+bars that fade and ask for review – and nothing else. No ads, no gems, no leagues.
 
 The first courses are **English** and **French** for German speakers, each with 21 units from A1 to B1
 (numbers, colours, time, weather, city, questions, restaurant, free time, past and future tense, travel, work …).
 
 ```
-mirra-lingua/
+parla/
 ├── content/courses/   Course files (en.json, fr.json) – the single source of lesson content
 ├── server/            Rust backend: accounts, course delivery, progress sync (SQLite)
 ├── android/           Android app (Kotlin + Jetpack Compose)
@@ -41,11 +41,11 @@ toolchain and a C compiler. `server/scripts/setup-rust.sh` installs Rust via rus
 ```bash
 cd server
 cargo build --release
-./target/release/mirra-lingua-server                 # reads ./mirra-lingua.toml
+./target/release/parla-server                 # reads ./parla.toml
 ```
 
 The result is a single binary with the course files built in. On first start it writes a commented
-`mirra-lingua.toml`, creates the SQLite database (`data/mirra-lingua.db`) and copies the built-in courses
+`parla.toml`, creates the SQLite database (`data/parla.db`) and copies the built-in courses
 into `content/`. Defaults: listens on `127.0.0.1:8085`, registration open, sessions expire after 180 days
 without use. Set `RUST_LOG=debug` for more log output.
 
@@ -53,25 +53,25 @@ without use. Set `RUST_LOG=debug` for more log output.
 
 ```bash
 cd server
-packaging/build-deb.sh          # -> target/debian/mirra-lingua-server_<version>_<arch>.deb
-sudo apt install ./target/debian/mirra-lingua-server_*.deb
+packaging/build-deb.sh          # -> target/debian/parla-server_<version>_<arch>.deb
+sudo apt install ./target/debian/parla-server_*.deb
 ```
 
 Jenkins builds the package on every run. It installs:
 
 | Path | What |
 |---|---|
-| `/usr/bin/mirra-lingua-server` | the server (courses built in) |
-| `/etc/mirra-lingua/mirra-lingua.toml` | configuration (kept on upgrades) |
-| `/var/lib/mirra-lingua/` | database and `content/` course files – back this up |
-| `mirra-lingua.service` | systemd service, enabled and started on install, restarted on upgrade |
+| `/usr/bin/parla-server` | the server (courses built in) |
+| `/etc/parla/parla.toml` | configuration (kept on upgrades) |
+| `/var/lib/parla/` | database and `content/` course files – back this up |
+| `parla.service` | systemd service, enabled and started on install, restarted on upgrade |
 
-The service runs as the system user `mirra-lingua` on `127.0.0.1:8085`. Logs: `journalctl -u mirra-lingua`.
+The service runs as the system user `parla` on `127.0.0.1:8085`. Logs: `journalctl -u parla`.
 `apt remove` keeps data and config; `apt purge` deletes both and the user. The binary needs glibc 2.34+
 (Debian 12, Ubuntu 22.04 or newer).
 
-Put a TLS reverse proxy in front of it – see [`deploy/nginx-lingua.conf`](deploy/nginx-lingua.conf)
-(also installed to `/usr/share/doc/mirra-lingua-server/examples/`).
+Put a TLS reverse proxy in front of it – see [`deploy/nginx-parla.conf`](deploy/nginx-parla.conf)
+(also installed to `/usr/share/doc/parla-server/examples/`).
 
 ### API
 
@@ -101,7 +101,7 @@ Course files live in the server's `contentDir` (default `content/`). The server 
 seconds; an invalid file is logged and ignored while the previous version stays online. The built-in courses are
 only copied into an *empty* content folder on first start, so a package upgrade never overwrites your course
 files – after updating the repository, copy the new `content/courses/*.json` to the server's content folder
-(`/var/lib/mirra-lingua/content` for the package), or let the Jenkins "Publish content" stage do it. See
+(`/var/lib/parla/content` for the package), or let the Jenkins "Publish content" stage do it. See
 [`content/README.md`](content/README.md) for the format.
 
 ## Android app
@@ -122,10 +122,10 @@ scripts/setup-android-sdk.sh > .build-env && . ./.build-env   # JDK + Android SD
 `setup-android-sdk.sh` reuses an existing SDK if `ANDROID_HOME` is set, accepts the SDK licences and installs
 platform 35 and build tools 35.0.0. Gradle 8 cannot run on Java 25+, so if the machine's Java is outside 17–24
 the script downloads a Temurin JDK 21 into `~/jdks/temurin-21` and uses it for the Android build only. Jenkins runs it automatically. The APK ends up in
-`android/app/build/outputs/apk/release/MirraLingua-<version>-release.apk`.
+`android/app/build/outputs/apk/release/Parla-<version>-release.apk`.
 
-The default server address comes from `mirraLinguaServer` in `android/gradle.properties`
-(`https://lingua.mirranet.de`) and can be changed on the login screen. Debug builds also allow plain HTTP,
+The default server address comes from `parlaServer` in `android/gradle.properties`
+(`https://parla.mirranet.de`) and can be changed on the login screen. Debug builds also allow plain HTTP,
 e.g. `http://10.0.2.2:8085` for a server on the emulator's host.
 
 The release build is signed with the debug key so it installs out of the box. For a real release, add your own

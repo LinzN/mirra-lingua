@@ -1,9 +1,9 @@
-package de.mirranet.lingua.data
+package de.mirranet.parla.data
 
 import android.content.Context
-import de.mirranet.lingua.BuildConfig
-import de.mirranet.lingua.engine.LearnEvent
-import de.mirranet.lingua.engine.Progress
+import de.mirranet.parla.BuildConfig
+import de.mirranet.parla.engine.LearnEvent
+import de.mirranet.parla.engine.Progress
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -14,8 +14,8 @@ import java.io.File
  */
 class LocalStore(context: Context) {
 
-    private val prefs = context.getSharedPreferences("mirra_lingua", Context.MODE_PRIVATE)
-    private val root = File(context.filesDir, "lingua").apply { mkdirs() }
+    private val prefs = context.getSharedPreferences("parla", Context.MODE_PRIVATE)
+    private val root = File(context.filesDir, "parla").apply { mkdirs() }
     private val coursesDir = File(root, "courses").apply { mkdirs() }
 
     var serverUrl: String

@@ -1,4 +1,4 @@
-package de.mirranet.lingua.ui
+package de.mirranet.parla.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -70,7 +70,7 @@ fun LoginScreen(vm: AppViewModel, serverUrl: String) {
             contentAlignment = Alignment.Center,
         ) { Text("🌳", fontSize = 52.sp) }
         Spacer(Modifier.height(18.dp))
-        Text("MirraLingua", style = IosType.Title1)
+        Text("Parla", style = IosType.Title1)
         Text("Sprachen lernen – einfach,\nkostenlos und ohne Werbung", style = IosType.Callout, color = Ios.SecondaryLabel,
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
         Spacer(Modifier.height(32.dp))

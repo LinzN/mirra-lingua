@@ -1,13 +1,13 @@
-package de.mirranet.lingua
+package de.mirranet.parla
 
-import de.mirranet.lingua.data.Codec
-import de.mirranet.lingua.engine.CourseIndex
-import de.mirranet.lingua.engine.Exercise
-import de.mirranet.lingua.engine.LearnEvent
-import de.mirranet.lingua.engine.LessonBuilder
-import de.mirranet.lingua.engine.Progress
-import de.mirranet.lingua.engine.ProgressLogic
-import de.mirranet.lingua.engine.Text
+import de.mirranet.parla.data.Codec
+import de.mirranet.parla.engine.CourseIndex
+import de.mirranet.parla.engine.Exercise
+import de.mirranet.parla.engine.LearnEvent
+import de.mirranet.parla.engine.LessonBuilder
+import de.mirranet.parla.engine.Progress
+import de.mirranet.parla.engine.ProgressLogic
+import de.mirranet.parla.engine.Text
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

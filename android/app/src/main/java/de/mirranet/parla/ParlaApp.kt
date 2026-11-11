@@ -1,9 +1,9 @@
-package de.mirranet.lingua
+package de.mirranet.parla
 
 import android.app.Application
-import de.mirranet.lingua.data.Repository
+import de.mirranet.parla.data.Repository
 
-class LinguaApp : Application() {
+class ParlaApp : Application() {
     lateinit var repository: Repository
         private set
 

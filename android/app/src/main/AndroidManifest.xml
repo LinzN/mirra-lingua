@@ -11,14 +11,14 @@
     </queries>
 
     <application
-        android:name=".LinguaApp"
+        android:name=".ParlaApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MirraLingua"
+        android:theme="@style/Theme.Parla"
         android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"

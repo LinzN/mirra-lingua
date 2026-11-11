@@ -1,4 +1,4 @@
-package de.mirranet.lingua.engine
+package de.mirranet.parla.engine
 
 import java.time.LocalDate
 import kotlin.math.floor

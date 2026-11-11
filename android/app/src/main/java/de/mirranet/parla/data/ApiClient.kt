@@ -1,4 +1,4 @@
-package de.mirranet.lingua.data
+package de.mirranet.parla.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,7 +18,7 @@ class ApiException(val status: Int, val code: String, message: String) : Excepti
 /** The server could not be reached (no network, DNS, timeout, TLS ...). */
 class OfflineException(cause: Throwable) : Exception("Keine Verbindung zum Server.", cause)
 
-/** Thin client for the MirraLingua HTTP API. All calls run on the IO dispatcher. */
+/** Thin client for the Parla HTTP API. All calls run on the IO dispatcher. */
 class ApiClient(private val baseUrl: () -> String, private val token: () -> String?) {
 
     private val http = OkHttpClient.Builder()

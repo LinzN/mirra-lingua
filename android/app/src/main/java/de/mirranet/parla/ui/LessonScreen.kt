@@ -1,4 +1,4 @@
-package de.mirranet.lingua.ui
+package de.mirranet.parla.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -56,7 +56,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.mirranet.lingua.engine.Exercise
+import de.mirranet.parla.engine.Exercise
 import kotlinx.coroutines.delay
 
 @Composable

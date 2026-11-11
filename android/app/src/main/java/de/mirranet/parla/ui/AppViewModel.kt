@@ -1,4 +1,4 @@
-package de.mirranet.lingua.ui
+package de.mirranet.parla.ui
 
 import android.app.Application
 import androidx.compose.runtime.getValue
@@ -7,16 +7,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import de.mirranet.lingua.LinguaApp
-import de.mirranet.lingua.data.ApiException
-import de.mirranet.lingua.data.OfflineException
-import de.mirranet.lingua.engine.Course
-import de.mirranet.lingua.engine.CourseIndex
-import de.mirranet.lingua.engine.Exercise
-import de.mirranet.lingua.engine.LessonBuilder
-import de.mirranet.lingua.engine.ProgressLogic
-import de.mirranet.lingua.engine.Skill
-import de.mirranet.lingua.engine.Text
+import de.mirranet.parla.ParlaApp
+import de.mirranet.parla.data.ApiException
+import de.mirranet.parla.data.OfflineException
+import de.mirranet.parla.engine.Course
+import de.mirranet.parla.engine.CourseIndex
+import de.mirranet.parla.engine.Exercise
+import de.mirranet.parla.engine.LessonBuilder
+import de.mirranet.parla.engine.ProgressLogic
+import de.mirranet.parla.engine.Skill
+import de.mirranet.parla.engine.Text
 import kotlinx.coroutines.launch
 
 sealed class Screen {
@@ -68,7 +68,7 @@ class LessonSession(
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
 
-    val repo = (app as LinguaApp).repository
+    val repo = (app as ParlaApp).repository
     val audio = Audio(app)
     val state = repo.state
 

@@ -1,4 +1,4 @@
-package de.mirranet.lingua
+package de.mirranet.parla
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,9 +9,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import de.mirranet.lingua.ui.AppViewModel
-import de.mirranet.lingua.ui.LinguaRoot
-import de.mirranet.lingua.ui.LinguaTheme
+import de.mirranet.parla.ui.AppViewModel
+import de.mirranet.parla.ui.ParlaRoot
+import de.mirranet.parla.ui.ParlaTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -26,8 +26,8 @@ class MainActivity : ComponentActivity() {
         })
         setContent {
             val st by vm.state.collectAsState()
-            LinguaTheme(largeText = st.largeText) {
-                LinguaRoot(vm)
+            ParlaTheme(largeText = st.largeText) {
+                ParlaRoot(vm)
             }
         }
     }

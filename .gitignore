@@ -2,7 +2,7 @@
 server/target/
 server/data/
 server/content/
-server/mirra-lingua.toml
+server/parla.toml
 server/.build-env
 
 # Android

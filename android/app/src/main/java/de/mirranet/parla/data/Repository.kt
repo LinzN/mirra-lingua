@@ -1,12 +1,12 @@
-package de.mirranet.lingua.data
+package de.mirranet.parla.data
 
 import android.content.Context
 import android.os.Build
 import android.util.Log
-import de.mirranet.lingua.engine.Course
-import de.mirranet.lingua.engine.LearnEvent
-import de.mirranet.lingua.engine.Progress
-import de.mirranet.lingua.engine.ProgressLogic
+import de.mirranet.parla.engine.Course
+import de.mirranet.parla.engine.LearnEvent
+import de.mirranet.parla.engine.Progress
+import de.mirranet.parla.engine.ProgressLogic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -269,6 +269,6 @@ class Repository(context: Context) {
     }
 
     companion object {
-        private const val TAG = "MirraLingua"
+        private const val TAG = "Parla"
     }
 }

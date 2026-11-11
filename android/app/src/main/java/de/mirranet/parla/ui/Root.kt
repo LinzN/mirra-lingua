@@ -1,4 +1,4 @@
-package de.mirranet.lingua.ui
+package de.mirranet.parla.ui
 
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -23,12 +23,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.mirranet.lingua.engine.ProgressLogic
+import de.mirranet.parla.engine.ProgressLogic
 import java.time.LocalDate
 
 /** Top-level navigation: login → content download → course choice → tree / lesson. */
 @Composable
-fun LinguaRoot(vm: AppViewModel) {
+fun ParlaRoot(vm: AppViewModel) {
     val st by vm.state.collectAsState()
     val context = LocalContext.current
 

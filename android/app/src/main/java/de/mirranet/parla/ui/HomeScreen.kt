@@ -1,4 +1,4 @@
-package de.mirranet.lingua.ui
+package de.mirranet.parla.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -52,11 +52,11 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.mirranet.lingua.BuildConfig
-import de.mirranet.lingua.data.AppState
-import de.mirranet.lingua.engine.Course
-import de.mirranet.lingua.engine.ProgressLogic
-import de.mirranet.lingua.engine.Skill
+import de.mirranet.parla.BuildConfig
+import de.mirranet.parla.data.AppState
+import de.mirranet.parla.engine.Course
+import de.mirranet.parla.engine.ProgressLogic
+import de.mirranet.parla.engine.Skill
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -495,7 +495,7 @@ private fun SettingsTab(vm: AppViewModel, st: AppState, course: Course) {
             RowDivider()
             ListRow("Konto löschen", titleColor = Ios.Red, onClick = { dialog = "delete" })
         }
-        Text("MirraLingua ${BuildConfig.VERSION_NAME} · ${st.serverUrl.removePrefix("https://")}",
+        Text("Parla ${BuildConfig.VERSION_NAME} · ${st.serverUrl.removePrefix("https://")}",
             style = IosType.Footnote, color = Ios.TertiaryLabel, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(16.dp))
     }

@@ -4,21 +4,21 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val serverUrl = (findProperty("mirraLinguaServer") as String?) ?: "https://lingua.mirranet.de"
-val appVersionName = "1.2.0"
-val appVersionCode = 3
+val serverUrl = (findProperty("parlaServer") as String?) ?: "https://parla.mirranet.de"
+val appVersionName = "1.3.0"
+val appVersionCode = 4
 
-// APK file name: MirraLingua-<version>-<buildType>.apk (e.g. MirraLingua-1.2.0-release.apk)
+// APK file name: Parla-<version>-<buildType>.apk (e.g. Parla-1.3.0-release.apk)
 base {
-    archivesName.set("MirraLingua-$appVersionName")
+    archivesName.set("Parla-$appVersionName")
 }
 
 android {
-    namespace = "de.mirranet.lingua"
+    namespace = "de.mirranet.parla"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "de.mirranet.lingua"
+        applicationId = "de.mirranet.parla"
         minSdk = 26
         targetSdk = 35
         versionCode = appVersionCode

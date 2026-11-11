@@ -1,4 +1,4 @@
-package de.mirranet.lingua.engine
+package de.mirranet.parla.engine
 
 /*
  * Plain Kotlin model of course content and progress. No Android dependencies, so the learning

@@ -1,4 +1,4 @@
-package de.mirranet.lingua.ui
+package de.mirranet.parla.ui
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
@@ -67,7 +67,7 @@ object IosType {
  * App theme. [largeText] scales all text by 20 % on top of the system font size setting.
  */
 @Composable
-fun LinguaTheme(largeText: Boolean = false, content: @Composable () -> Unit) {
+fun ParlaTheme(largeText: Boolean = false, content: @Composable () -> Unit) {
     val scheme = lightColorScheme(
         primary = Ios.Blue, onPrimary = Color.White, secondary = Ios.Green, onSecondary = Color.White,
         error = Ios.Red, background = Ios.GroupedBackground, surface = Color.White, onSurface = Ios.Label,

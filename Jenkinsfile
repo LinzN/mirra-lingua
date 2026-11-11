@@ -1,5 +1,5 @@
-// Builds the MirraLingua server (Rust binary + Debian package) and the Android APK.
-// Optional: set LINGUA_CONTENT_TARGET (e.g. "root@mirranet.de:/var/lib/mirra-lingua/content/") to publish
+// Builds the Parla server (Rust binary + Debian package) and the Android APK.
+// Optional: set PARLA_CONTENT_TARGET (e.g. "root@mirranet.de:/var/lib/parla/content/") to publish
 // course files after a successful build – the app picks them up on its next sync.
 pipeline {
     agent any
@@ -18,7 +18,7 @@ pipeline {
                             . ./.build-env
                             cargo test --locked
                             cargo build --release --locked
-                            # Debian package: target/debian/mirra-lingua-server_<version>_<arch>.deb
+                            # Debian package: target/debian/parla-server_<version>_<arch>.deb
                             SKIP_BUILD=1 packaging/build-deb.sh
                         '''
                     }
@@ -26,7 +26,7 @@ pipeline {
             }
             post {
                 success {
-                    archiveArtifacts artifacts: 'server/target/debian/*.deb, server/target/release/mirra-lingua-server', fingerprint: true
+                    archiveArtifacts artifacts: 'server/target/debian/*.deb, server/target/release/parla-server', fingerprint: true
                 }
             }
         }
@@ -51,9 +51,9 @@ pipeline {
             }
         }
         stage('Publish content') {
-            when { allOf { branch 'main'; expression { env.LINGUA_CONTENT_TARGET && currentBuild.currentResult == 'SUCCESS' } } }
+            when { allOf { branch 'main'; expression { env.PARLA_CONTENT_TARGET && currentBuild.currentResult == 'SUCCESS' } } }
             steps {
-                sh 'rsync -av --delay-updates content/courses/*.json "$LINGUA_CONTENT_TARGET"'
+                sh 'rsync -av --delay-updates content/courses/*.json "$PARLA_CONTENT_TARGET"'
             }
         }
     }

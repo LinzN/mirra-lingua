@@ -1,4 +1,4 @@
-package de.mirranet.lingua.ui
+package de.mirranet.parla.ui
 
 import android.content.Context
 import android.media.AudioManager
@@ -33,7 +33,7 @@ class Audio(context: Context) : TextToSpeech.OnInitListener {
     fun speak(text: String, slow: Boolean = false) {
         if (!ready || !available) return
         tts.setSpeechRate(if (slow) 0.6f else 0.95f)
-        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "lingua")
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "parla")
     }
 
     fun stop() {
