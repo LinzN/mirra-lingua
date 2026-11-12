@@ -108,7 +108,7 @@ class AppViewModel(val repo: Repository, val audio: Audio) {
             } catch (e: ApiException) {
                 error = e.message
             } catch (e: OfflineException) {
-                error = "Server nicht erreichbar. Prüfe Adresse und Internetverbindung."
+                error = e.reason
             } catch (e: Exception) {
                 error = "Unerwarteter Fehler: ${e.message}"
             } finally {

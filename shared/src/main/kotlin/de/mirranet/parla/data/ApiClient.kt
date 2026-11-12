@@ -15,8 +15,30 @@ import java.util.concurrent.TimeUnit
 /** Error reported by the server (status + machine code + German message for the user). */
 class ApiException(val status: Int, val code: String, message: String) : Exception(message)
 
-/** The server could not be reached (no network, DNS, timeout, TLS ...). */
-class OfflineException(cause: Throwable) : Exception("Keine Verbindung zum Server.", cause)
+/** The server could not be reached (no network, DNS, timeout, TLS ...). [reason] says why, in German. */
+class OfflineException(cause: Throwable) : Exception("Keine Verbindung zum Server.", cause) {
+    val reason: String = describe(cause)
+
+    private companion object {
+        fun describe(e: Throwable): String {
+            val all = generateSequence(e) { it.cause }.toList()
+            val text = all.joinToString(" ") { "${it::class.java.simpleName} ${it.message.orEmpty()}" }
+            return when {
+                all.any { it is java.net.UnknownHostException } ->
+                    "Die Serveradresse wurde nicht gefunden. Prüfe die Adresse und die Internetverbindung."
+                text.contains("CLEARTEXT", ignoreCase = true) ->
+                    "Unverschlüsselte Verbindungen (http://) sind auf diesem Gerät gesperrt. Nutze eine https://-Adresse."
+                all.any { it is javax.net.ssl.SSLException } || text.contains("Certificate", ignoreCase = true) ->
+                    "Sichere Verbindung fehlgeschlagen: Das Zertifikat des Servers wird nicht akzeptiert."
+                all.any { it is java.net.SocketTimeoutException } ->
+                    "Der Server antwortet nicht (Zeitüberschreitung)."
+                all.any { it is java.net.ConnectException } ->
+                    "Der Server ist unter dieser Adresse nicht erreichbar (Verbindung abgelehnt)."
+                else -> "Keine Verbindung zum Server (${e::class.java.simpleName}: ${e.message.orEmpty()})."
+            }
+        }
+    }
+}
 
 /** Thin client for the Parla HTTP API. All calls run on the IO dispatcher. */
 class ApiClient(private val baseUrl: () -> String, private val token: () -> String?) {

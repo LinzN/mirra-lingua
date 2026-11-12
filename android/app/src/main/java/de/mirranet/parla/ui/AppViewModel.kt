@@ -98,7 +98,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: ApiException) {
                 error = e.message
             } catch (e: OfflineException) {
-                error = "Server nicht erreichbar. Prüfe Adresse und Internetverbindung."
+                error = e.reason
             } catch (e: Exception) {
                 error = "Unerwarteter Fehler: ${e.message}"
             } finally {
