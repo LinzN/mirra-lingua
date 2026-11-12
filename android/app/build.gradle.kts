@@ -42,6 +42,9 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    // Learning engine, API client and sync are shared with the desktop app.
+    sourceSets["main"].java.srcDir("../../shared/src/main/kotlin")
+
     buildFeatures {
         compose = true
         buildConfig = true

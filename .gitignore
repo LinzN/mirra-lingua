@@ -12,6 +12,14 @@ android/.kotlin/
 *.keystore
 *.jks
 
+# Desktop
+desktop/.gradle/
+desktop/build/
+desktop/.build-env
+desktop/.kotlin/
+*.deb
+*.msi
+
 # OS / editors
 .DS_Store
 .idea/

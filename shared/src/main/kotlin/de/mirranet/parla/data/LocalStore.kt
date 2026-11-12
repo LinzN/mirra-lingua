@@ -1,44 +1,50 @@
 package de.mirranet.parla.data
 
-import android.content.Context
-import de.mirranet.parla.BuildConfig
 import de.mirranet.parla.engine.LearnEvent
 import de.mirranet.parla.engine.Progress
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
+/** Small key-value store for settings (SharedPreferences on Android, a properties file on desktop). */
+interface Prefs {
+    fun getString(key: String): String?
+    fun putString(key: String, value: String?)
+    fun getBoolean(key: String, default: Boolean): Boolean
+    fun putBoolean(key: String, value: Boolean)
+}
+
 /**
  * On-device cache: downloaded courses, last known progress, settings and the queue of events
- * not yet uploaded. Files are written atomically (temp file + rename).
+ * not yet uploaded. Files are written atomically (temp file + rename). Shared by Android and desktop;
+ * the platform provides [prefs], the data folder [root] and the default server address.
  */
-class LocalStore(context: Context) {
+class LocalStore(private val prefs: Prefs, root: File, private val defaultServerUrl: String) {
 
-    private val prefs = context.getSharedPreferences("parla", Context.MODE_PRIVATE)
-    private val root = File(context.filesDir, "parla").apply { mkdirs() }
+    private val root = root.apply { mkdirs() }
     private val coursesDir = File(root, "courses").apply { mkdirs() }
 
     var serverUrl: String
-        get() = prefs.getString("server_url", null) ?: BuildConfig.DEFAULT_SERVER_URL
-        set(v) = prefs.edit().putString("server_url", v.trim().trimEnd('/')).apply()
+        get() = prefs.getString("server_url") ?: defaultServerUrl
+        set(v) = prefs.putString("server_url", v.trim().trimEnd('/'))
 
     var token: String?
-        get() = prefs.getString("token", null)
-        set(v) = prefs.edit().putString("token", v).apply()
+        get() = prefs.getString("token")
+        set(v) = prefs.putString("token", v)
 
     var username: String?
-        get() = prefs.getString("username", null)
-        set(v) = prefs.edit().putString("username", v).apply()
+        get() = prefs.getString("username")
+        set(v) = prefs.putString("username", v)
 
     /** Device-only accessibility option: 20 % larger text. */
     var largeText: Boolean
         get() = prefs.getBoolean("large_text", false)
-        set(v) = prefs.edit().putBoolean("large_text", v).apply()
+        set(v) = prefs.putBoolean("large_text", v)
 
     /** Settings changed while offline and not yet sent to the server. */
     var settingsDirty: Boolean
         get() = prefs.getBoolean("settings_dirty", false)
-        set(v) = prefs.edit().putBoolean("settings_dirty", v).apply()
+        set(v) = prefs.putBoolean("settings_dirty", v)
 
     // ------------------------------------------------------------------ courses
 
@@ -75,7 +81,9 @@ class LocalStore(context: Context) {
 
     /** Removes everything tied to the account (courses stay cached – they are not personal). */
     fun clearAccount() {
-        prefs.edit().remove("token").remove("username").remove("settings_dirty").apply()
+        prefs.putString("token", null)
+        prefs.putString("username", null)
+        prefs.putBoolean("settings_dirty", false)
         listOf("progress.json", "pending.json", "settings.json").forEach { File(root, it).delete() }
     }
 

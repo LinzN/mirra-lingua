@@ -1,8 +1,5 @@
 package de.mirranet.parla.data
 
-import android.content.Context
-import android.os.Build
-import android.util.Log
 import de.mirranet.parla.engine.Course
 import de.mirranet.parla.engine.LearnEvent
 import de.mirranet.parla.engine.Progress
@@ -19,6 +16,12 @@ import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 import java.time.LocalDate
 import java.util.UUID
+
+/** Platform logging (android.util.Log on Android, stderr on desktop). */
+interface Logger {
+    fun warn(message: String, error: Throwable? = null)
+    fun error(message: String, error: Throwable? = null)
+}
 
 /** Everything the UI shows. */
 data class AppState(
@@ -47,14 +50,13 @@ data class AppState(
  * lessons appear without an app update. Learning results are recorded locally first and uploaded as
  * idempotent events.
  */
-class Repository(context: Context) {
+class Repository(private val store: LocalStore, device: String, private val log: Logger) {
 
-    private val store = LocalStore(context)
     private val api = ApiClient({ store.serverUrl }, { store.token })
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val syncMutex = Mutex()
     private val pendingLock = Any()
-    private val device = "${Build.MANUFACTURER} ${Build.MODEL}".take(100)
+    private val device = device.take(100)
 
     private val _state = MutableStateFlow(initialState())
     val state: StateFlow<AppState> = _state
@@ -79,7 +81,7 @@ class Repository(context: Context) {
         return list.mapNotNull { info ->
             val text = store.courseText(info.id) ?: return@mapNotNull null
             runCatching { Codec.parseCourse(text, info.hash) }
-                .onFailure { Log.w(TAG, "Cached course ${info.id} unreadable", it) }
+                .onFailure { log.warn("Cached course ${info.id} unreadable", it) }
                 .getOrNull()
         }
     }
@@ -157,9 +159,9 @@ class Repository(context: Context) {
             } catch (e: OfflineException) {
                 _state.update { it.copy(offline = true) }
             } catch (e: ApiException) {
-                if (e.status == 401) sessionExpired() else Log.w(TAG, "Sync failed: ${e.code} ${e.message}")
+                if (e.status == 401) sessionExpired() else log.warn("Sync failed: ${e.code} ${e.message}")
             } catch (e: Exception) {
-                Log.e(TAG, "Sync failed", e)
+                log.error("Sync failed", e)
             } finally {
                 _state.update { it.copy(syncing = false) }
             }
@@ -200,7 +202,7 @@ class Repository(context: Context) {
             val r = api.postEvents(Codec.eventsJson(chunk))
             snapshot = r.getJSONObject("progress")
             val rejected = r.optJSONArray("rejected")
-            if (rejected != null && rejected.length() > 0) Log.w(TAG, "Server rejected events: $rejected")
+            if (rejected != null && rejected.length() > 0) log.warn("Server rejected events: $rejected")
         }
         val server = Codec.parseProgress(snapshot ?: api.progress())
         store.saveServerProgress(server)
@@ -266,9 +268,5 @@ class Repository(context: Context) {
         store.settingsDirty = true
         _state.update { it.copy(settings = s) }
         syncInBackground()
-    }
-
-    companion object {
-        private const val TAG = "Parla"
     }
 }
