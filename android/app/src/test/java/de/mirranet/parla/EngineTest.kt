@@ -13,14 +13,17 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.time.LocalDate
 import kotlin.random.Random
 
-/** Runs the lesson engine against the real course files from /content/courses. */
+/**
+ * Runs the lesson engine against the real course files. Test copies live in src/test/resources/courses;
+ * refresh them from LinzN/parla-server (content/courses) when the courses change.
+ */
 class EngineTest {
 
-    private fun course(id: String) = Codec.parseCourse(File("../../content/courses/$id.json").readText(), "test")
+    private fun course(id: String) =
+        Codec.parseCourse(javaClass.getResource("/courses/$id.json")!!.readText(), "test")
 
     @Test
     fun grading() {

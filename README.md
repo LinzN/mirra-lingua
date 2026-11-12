@@ -1,6 +1,6 @@
 # Parla
 
-A calm, simple language learning app: units grouped by level, short lessons with three hearts, and strength
+A calm, simple language learning app for Android: units grouped by level, short lessons with three hearts, and strength
 bars that fade and ask for review – and nothing else. No ads, no gems, no leagues.
 
 The first courses are **English** and **French** for German speakers, each with 21 units from A1 to B1
@@ -18,20 +18,20 @@ The first courses are **English** and **French** for German speakers, each with 
 
 ```
 parla/
-├── content/courses/   Course files (en.json, fr.json) – the single source of lesson content
-├── server/            Rust backend: accounts, course delivery, progress sync (SQLite)
 ├── android/           Android app (Kotlin + Jetpack Compose)
-├── deploy/            nginx example
-└── Jenkinsfile        Builds the server JAR and the APK
+├── docs/screenshots/  Images for this README
+└── Jenkinsfile        Builds and tests the APK
 ```
+
+The backend (accounts, course files, progress sync) lives in
+**[LinzN/parla-server](https://github.com/LinzN/parla-server)** – it also holds the course content and its format.
 
 ## How it fits together
 
 * **Content comes from the server.** The app ships without any lessons. On every start and whenever it returns to
   the foreground it asks the server for the course list hash; only courses whose hash changed are downloaded and
   cached for offline use. Editing a file in the server's content folder is enough – no app update, no server restart.
-* **Accounts.** Username + password (PBKDF2-SHA256), random bearer tokens that are stored only as SHA-256 hashes,
-  rate-limited login, password change (signs out other devices) and account deletion.
+* **Accounts.** Username + password; the app can change the password and delete the account.
 * **Adaptive difficulty.** Every finished session reports how many answers were right. The server keeps a running
   accuracy per skill (an exponential moving average). From it the app derives a difficulty between 0 and 1. A new
   skill also takes the learner's results in the rest of the course into account. Low difficulty means more
@@ -42,77 +42,6 @@ parla/
 * **Progress sync.** Finishing a lesson creates an event with a random id. Events are applied locally right away
   (works offline) and uploaded in the background. The server applies each id at most once, so retries are safe,
   and returns the authoritative progress snapshot.
-
-## Server
-
-Written in Rust (axum, SQLite via rusqlite with bundled SQLite, Argon2id passwords). Requirements: a Rust
-toolchain and a C compiler. `server/scripts/setup-rust.sh` installs Rust via rustup if `cargo` is missing.
-
-```bash
-cd server
-cargo build --release
-./target/release/parla-server                 # reads ./parla.toml
-```
-
-The result is a single binary with the course files built in. On first start it writes a commented
-`parla.toml`, creates the SQLite database (`data/parla.db`) and copies the built-in courses
-into `content/`. Defaults: listens on `127.0.0.1:8085`, registration open, sessions expire after 180 days
-without use. Set `RUST_LOG=debug` for more log output.
-
-### Debian package
-
-```bash
-cd server
-packaging/build-deb.sh          # -> target/debian/parla-server_<version>_<arch>.deb
-sudo apt install ./target/debian/parla-server_*.deb
-```
-
-Jenkins builds the package on every run. It installs:
-
-| Path | What |
-|---|---|
-| `/usr/bin/parla-server` | the server (courses built in) |
-| `/etc/parla/parla.toml` | configuration (kept on upgrades) |
-| `/var/lib/parla/` | database and `content/` course files – back this up |
-| `parla.service` | systemd service, enabled and started on install, restarted on upgrade |
-
-The service runs as the system user `parla` on `127.0.0.1:8085`. Logs: `journalctl -u parla`.
-`apt remove` keeps data and config; `apt purge` deletes both and the user. The binary needs glibc 2.34+
-(Debian 12, Ubuntu 22.04 or newer).
-
-Put a TLS reverse proxy in front of it – see [`deploy/nginx-parla.conf`](deploy/nginx-parla.conf)
-(also installed to `/usr/share/doc/parla-server/examples/`).
-
-### API
-
-| Method | Path | Auth | Purpose |
-|---|---|---|---|
-| GET | `/api/health` | – | Version check |
-| POST | `/api/auth/register` | – | `{username, password, device?}` → `{token, user}` |
-| POST | `/api/auth/login` | – | `{username, password, device?}` → `{token, user}` |
-| POST | `/api/auth/logout` | ✓ | Ends this session |
-| POST | `/api/auth/password` | ✓ | `{oldPassword, newPassword}`; signs out other devices |
-| DELETE | `/api/account` | ✓ | `{password}`; deletes the account and all progress |
-| GET | `/api/me` | ✓ | User and settings |
-| PUT | `/api/settings` | ✓ | `{goal?, sound?, listen?, course?}` |
-| GET | `/api/courses` | – | `{hash, courses: [{id, name, flag, version, hash, skills}]}`, supports `If-None-Match` |
-| GET | `/api/courses/{id}` | – | Course document, `ETag` = content hash |
-| GET | `/api/progress` | ✓ | `{courses: {course: {skill: {lessons, lastPracticed, reps}}}, xp: {day: xp}}` |
-| POST | `/api/progress/events` | ✓ | `{events: [...]}` → `{applied, duplicates, rejected, progress}` |
-
-Event types: `lesson` (`skill`, `lesson`, `xp`, `day`, `at`), `practice` (`skills`, `xp`, `day`, `at`) and
-`reset` (clears one course). Lessons and practice sessions may carry `correct` and `total` (graded answers,
-at most 100), which update the per-skill `accuracy` (0..1) and `answers` in the progress snapshot. XP per event
-is capped at 30.
-
-## Adding or changing content
-
-Course files live in the server's `contentDir` (default `content/`). The server checks for changes every few
-seconds; an invalid file is logged and ignored while the previous version stays online. The built-in courses are
-only copied into an *empty* content folder on first start, so a package upgrade never overwrites your course
-files – after updating the repository, copy the new `content/courses/*.json` to the server's content folder
-(`/var/lib/parla/content` for the package), or let the Jenkins "Publish content" stage do it. See
-[`content/README.md`](content/README.md) for the format.
 
 ## Android app
 
@@ -143,9 +72,6 @@ The release build is signed with the debug key so it installs out of the box. Fo
 
 ## Tests
 
-* `server`: `cargo test` – unit tests plus end-to-end tests against the real router with a temporary SQLite
-  database and content folder: accounts, closed registration, rate limiting, ETags, hot reload of course files
-  (including broken and deleted files), idempotent events with accuracy tracking, settings, password change and
-  account deletion.
-* `android`: `EngineTest` runs the lesson engine against the real course files and checks that every generated
-  exercise is solvable and that local progress rules match the server.
+`EngineTest` runs the lesson engine against the real course files (test copies in
+`android/app/src/test/resources/courses`, taken from parla-server) and checks that every generated exercise is
+solvable, that difficulty follows accuracy and that local progress rules match the server.
