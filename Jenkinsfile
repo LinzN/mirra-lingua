@@ -1,8 +1,9 @@
-// Builds the Parla client apps: Android (APK) and desktop (Linux .deb, Windows .msi).
+// Builds the Parla client apps: Android (APK) and desktop (Linux .deb, Windows setup.exe).
 // The server lives in Parla-Studio/parla-server.
 //
-// The .msi can only be built on Windows: set the environment variable PARLA_WINDOWS_AGENT
-// (e.g. in the job or globally) to the label of a Windows agent with a JDK 17-21 to enable it.
+// The Windows installer (setup.exe) is built right here on Linux with NSIS: the build machine needs
+// `apt install nsis unzip`. Optionally a .msi can be built as well: set the environment variable
+// PARLA_WINDOWS_AGENT (e.g. in the job or globally) to the label of a Windows agent with a JDK 17-21.
 pipeline {
     agent any
     options { buildDiscarder(logRotator(numToKeepStr: '20')) }
@@ -44,6 +45,24 @@ pipeline {
         }
 
         stage('Desktop Windows') {
+            steps {
+                dir('desktop') {
+                    // Windows installer built on Linux: app + Windows libraries + bundled Windows Java runtime,
+                    // packed with NSIS (makensis). The Windows JRE is downloaded once into ~/jdks.
+                    sh '''
+                        chmod +x gradlew scripts/setup-jdk.sh scripts/build-windows-installer.sh
+                        scripts/setup-jdk.sh > .build-env
+                        . ./.build-env
+                        ./gradlew --no-daemon distWindows
+                    '''
+                }
+            }
+            post {
+                success { archiveArtifacts artifacts: 'desktop/build/dist/*.exe', fingerprint: true }
+            }
+        }
+
+        stage('Desktop Windows MSI') {
             when { beforeAgent true; expression { env.PARLA_WINDOWS_AGENT?.trim() } }
             agent { label "${env.PARLA_WINDOWS_AGENT}" }
             steps {

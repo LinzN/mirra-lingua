@@ -48,7 +48,7 @@ parla/
 ├── android/           Android app (Kotlin + Jetpack Compose)
 ├── desktop/           Desktop app for Linux and Windows (Kotlin + Compose Multiplatform)
 ├── docs/screenshots/  Images for this README
-└── Jenkinsfile        Builds the APK, the .deb and (with a Windows agent) the .msi
+└── Jenkinsfile        Builds the APK, the .deb and the Windows setup.exe
 ```
 
 The backend (accounts, course files, progress sync) lives in
@@ -123,10 +123,21 @@ scripts/setup-jdk.sh > .build-env && . ./.build-env
 ./gradlew distDeb      # Linux:   build/dist/Parla-<version>-linux.deb   (needs dpkg-deb + fakeroot)
 ```
 
-On Windows: `gradlew.bat distMsi` → `build\dist\Parla-<version>-windows.msi` (per-user install, Start menu
-and desktop shortcut; WiX is downloaded by the build). Installers bundle their own Java runtime, so users need
-nothing else. jpackage cannot cross-build, so the .msi has to be built on Windows: in Jenkins, set
-`PARLA_WINDOWS_AGENT` to the label of a Windows agent to enable that stage.
+The Windows installer is built on Linux, no Windows machine needed (needs `apt install nsis unzip`):
+
+```bash
+./gradlew distWindows  # Windows: build/dist/Parla-<version>-windows-setup.exe
+```
+
+It bundles the app with its Windows libraries, a Windows Java runtime (Temurin JRE 21, downloaded once into
+`~/jdks/temurin-21-jre-windows-x64`) and a small `Parla.exe` launcher, built with NSIS
+(`desktop/packaging/windows/`). The setup installs per user into `%LOCALAPPDATA%\Programs\Parla` without admin
+rights, adds Start menu and desktop shortcuts and an entry in *Apps*; running a newer setup updates in place.
+Uninstalling keeps the learning data in `%APPDATA%\Parla`.
+
+Alternatively, on Windows: `gradlew.bat distMsi` → `build\dist\Parla-<version>-windows.msi` (WiX is downloaded by
+the build). jpackage cannot cross-build, so in Jenkins the .msi stage only runs when `PARLA_WINDOWS_AGENT` is set
+to the label of a Windows agent. All installers bundle their own Java runtime, so users need nothing else.
 
 The version number lives in `desktop/build.gradle.kts` (keep it in step with Android), the default server in
 `desktop/gradle.properties`.
