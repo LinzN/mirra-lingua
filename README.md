@@ -26,7 +26,7 @@ parla/
 ```
 
 The backend (accounts, course files, progress sync) lives in
-**[LinzN/parla-server](https://github.com/LinzN/parla-server)** – it also holds the course content and its format.
+**[Parla-Studio/parla-server](https://github.com/Parla-Studio/parla-server)** – it also holds the course content and its format.
 
 ## How it fits together
 

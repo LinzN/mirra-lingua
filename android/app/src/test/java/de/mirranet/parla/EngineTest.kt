@@ -18,7 +18,7 @@ import kotlin.random.Random
 
 /**
  * Runs the lesson engine against the real course files. Test copies live in src/test/resources/courses;
- * refresh them from LinzN/parla-server (content/courses) when the courses change.
+ * refresh them from Parla-Studio/parla-server (content/courses) when the courses change.
  */
 class EngineTest {
 
