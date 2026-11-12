@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cleartext (http://) is allowed so a Parla server in the home network can be used without TLS.
+     The login screen only accepts http:// for local addresses (see LoginScreen.isLocalAddress);
+     servers on the internet must use https://. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

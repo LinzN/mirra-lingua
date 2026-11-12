@@ -51,6 +51,8 @@ fun LoginScreen(vm: AppViewModel, serverUrl: String) {
             register && password.text.length < 8 -> "Das Passwort muss mindestens 8 Zeichen lang sein."
             register && password.text != confirm.text -> "Die beiden Passwörter sind nicht gleich."
             !url.startsWith("https://") && !url.startsWith("http://") -> "Die Serveradresse muss mit https:// beginnen."
+            url.startsWith("http://") && !isLocalAddress(url) ->
+                "http:// geht nur für Server im eigenen Netz (z. B. 192.168.… oder 10.…). Nutze sonst https://."
             else -> null
         }
         if (localError == null) vm.authenticate(url, username.text, password.text, register)
@@ -100,4 +102,22 @@ fun LoginScreen(vm: AppViewModel, serverUrl: String) {
         }
         Spacer(Modifier.height(32.dp))
     }
+}
+
+/**
+ * True for servers in the local network: private IPv4 ranges (10/8, 172.16/12, 192.168/16, 100.64/10 as used by
+ * VPNs like Tailscale), loopback, link-local, IPv6 ULA/link-local and local host names (localhost, *.local,
+ * *.lan, *.home.arpa, *.internal). Only these may be used with plain http://.
+ */
+private fun isLocalAddress(url: String): Boolean {
+    val host = runCatching { java.net.URI(url).host }.getOrNull()?.lowercase()?.trim('[', ']') ?: return false
+    if (host == "localhost" || listOf(".local", ".lan", ".home.arpa", ".internal").any { host.endsWith(it) }) return true
+    val v4 = host.split('.').mapNotNull { it.toIntOrNull() }
+    if (v4.size == 4 && host.count { it == '.' } == 3) {
+        val (a, b) = v4
+        return a == 10 || a == 127 || (a == 172 && b in 16..31) || (a == 192 && b == 168) ||
+            (a == 169 && b == 254) || (a == 100 && b in 64..127)
+    }
+    if (':' in host) return host == "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80")
+    return false
 }
