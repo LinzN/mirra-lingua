@@ -1,20 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A simple tree: round crown on a trunk, with a speech-bubble notch. 108dp adaptive icon canvas. -->
+<!-- Parla logo foreground: a speech bubble with a sprout. Artwork is drawn in 512 units and scaled
+     into the centre of the 108dp adaptive icon canvas so it stays inside the safe zone. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="#8B5A2B"
-        android:pathData="M50,58h8v20h-8z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,28a18,18 0,1 1,-0.01,0z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M40,60l-6,10l12,-5z" />
-    <path
-        android:fillColor="#58A700"
-        android:pathData="M47,44h14v4h-14zM47,52h10v4h-10z" />
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="512" android:viewportHeight="512">
+    <group android:scaleX="0.68" android:scaleY="0.68" android:pivotX="256" android:pivotY="268">
+    <path android:fillColor="#2F6A00" android:fillAlpha="0.22" android:pathData="M186,136 H326 A80,80 0 0 1 406,216 V286 A80,80 0 0 1 326,366 H186 A80,80 0 0 1 106,286 V216 A80,80 0 0 1 186,136 z M168,330 L140,420 L250,358 z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M186,126 H326 A80,80 0 0 1 406,206 V276 A80,80 0 0 1 326,356 H186 A80,80 0 0 1 106,276 V206 A80,80 0 0 1 186,126 z M168,320 L140,410 L250,348 z" />
+    <path android:strokeColor="#58A700" android:strokeWidth="20" android:strokeLineCap="round" android:pathData="M256,318 L256,236" />
+    <path android:fillColor="#78C800" android:pathData="M256,262 C206,262 184,226 186,190 C228,188 256,214 256,262 z" />
+    <path android:fillColor="#58A700" android:pathData="M256,244 C306,244 330,206 328,168 C284,166 256,194 256,244 z" />
+    </group>
 </vector>

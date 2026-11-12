@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The complete Parla logo (rounded square, gradient, speech bubble with sprout), same as docs/logo.svg. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="96dp" android:height="96dp"
+    android:viewportWidth="512" android:viewportHeight="512">
+    <path android:pathData="M128,16 H384 A112,112 0 0 1 496,128 V384 A112,112 0 0 1 384,496 H128 A112,112 0 0 1 16,384 V128 A112,112 0 0 1 128,16 z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="16" android:startY="16" android:endX="496" android:endY="496">
+                <item android:offset="0" android:color="#FF9BE015" />
+                <item android:offset="1" android:color="#FF4E9E00" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#2F6A00" android:fillAlpha="0.22" android:pathData="M186,136 H326 A80,80 0 0 1 406,216 V286 A80,80 0 0 1 326,366 H186 A80,80 0 0 1 106,286 V216 A80,80 0 0 1 186,136 z M168,330 L140,420 L250,358 z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M186,126 H326 A80,80 0 0 1 406,206 V276 A80,80 0 0 1 326,356 H186 A80,80 0 0 1 106,276 V206 A80,80 0 0 1 186,126 z M168,320 L140,410 L250,348 z" />
+    <path android:strokeColor="#58A700" android:strokeWidth="20" android:strokeLineCap="round" android:pathData="M256,318 L256,236" />
+    <path android:fillColor="#78C800" android:pathData="M256,262 C206,262 184,226 186,190 C228,188 256,214 256,262 z" />
+    <path android:fillColor="#58A700" android:pathData="M256,244 C306,244 330,206 328,168 C284,166 256,194 256,244 z" />
+</vector>
