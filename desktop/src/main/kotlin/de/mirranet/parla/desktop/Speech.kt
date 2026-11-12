@@ -182,8 +182,8 @@ class Speech {
         val base = tag.substringBefore('-')
         current?.destroy()
         val cmd = when (tool) {
-            "spd-say" -> listOf("spd-say", "-w", "-C", "-l", base, "-r", if (slow) "-50" else "-10", text)
-            else -> listOf(tool, "-v", base, "-s", if (slow) "110" else "150", text)
+            "spd-say" -> listOf("spd-say", "-w", "-C", "-l", base, "-r", if (slow) "-60" else "-10", text)
+            else -> listOf(tool, "-v", base, "-s", if (slow) "90" else "150", text)
         }
         current = ProcessBuilder(cmd).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start()
     }
@@ -230,6 +230,18 @@ class Audio {
             return
         }
         speech.speak(text, slow)
+    }
+
+    // Speaker button: pressing it again for the same text reads it much slower, then alternates.
+    private var lastButtonText: String? = null
+    private var lastButtonSlow = false
+
+    /** For the speaker buttons: normal speed, and noticeably slower when pressed again for the same text. */
+    fun speakButton(text: String) {
+        val slow = text == lastButtonText && !lastButtonSlow
+        lastButtonText = text
+        lastButtonSlow = slow
+        speak(text, slow)
     }
     fun stop() = speech.stop()
     fun feedback(correct: Boolean, enabled: Boolean) {

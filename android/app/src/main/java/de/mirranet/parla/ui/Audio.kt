@@ -35,8 +35,20 @@ class Audio(context: Context) : TextToSpeech.OnInitListener {
 
     fun speak(text: String, slow: Boolean = false) {
         if (!ready || !available) return
-        tts.setSpeechRate(if (slow) 0.6f else 0.95f)
+        tts.setSpeechRate(if (slow) 0.5f else 0.95f)
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "parla")
+    }
+
+    // Speaker button: pressing it again for the same text reads it much slower, then alternates.
+    private var lastButtonText: String? = null
+    private var lastButtonSlow = false
+
+    /** For the speaker buttons: normal speed, and noticeably slower when pressed again for the same text. */
+    fun speakButton(text: String) {
+        val slow = text == lastButtonText && !lastButtonSlow
+        lastButtonText = text
+        lastButtonSlow = slow
+        speak(text, slow)
     }
 
     fun stop() {

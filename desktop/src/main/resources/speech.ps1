@@ -57,7 +57,7 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
         $v = Pick (WinRtVoices) $tag { param($x) $x.Language }
         if ($v) {
             $winrt.Voice = $v
-            try { $winrt.Options.SpeakingRate = $(if ($slow) { 0.6 } else { 0.95 }) } catch { }
+            try { $winrt.Options.SpeakingRate = $(if ($slow) { 0.5 } else { 0.95 }) } catch { }
             $task = $asTask.MakeGenericMethod([Windows.Media.SpeechSynthesis.SpeechSynthesisStream]).Invoke(
                 $null, @($winrt.SynthesizeTextToStreamAsync($text)))
             $null = $task.Wait(-1)
@@ -69,7 +69,7 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
             $sv = Pick (SapiVoices) $tag { param($x) $x.VoiceInfo.Culture.Name }
             if ($sv) {
                 $sapi.SelectVoice($sv.VoiceInfo.Name)
-                $sapi.Rate = $(if ($slow) { -4 } else { 0 })
+                $sapi.Rate = $(if ($slow) { -6 } else { 0 })
                 $ms = New-Object System.IO.MemoryStream
                 $sapi.SetOutputToWaveStream($ms)
                 $sapi.Speak($text)

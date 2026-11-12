@@ -186,7 +186,7 @@ private fun Prompt(vm: AppViewModel, s: LessonSession, text: String, german: Boo
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (speak) {
-            CircleButton({ vm.audio.speak(text) }, size = 52.dp, background = Ios.BlueTint) { SpeakerIcon(Ios.Blue, 26.dp) }
+            CircleButton({ vm.audio.speakButton(text) }, size = 52.dp, background = Ios.BlueTint) { SpeakerIcon(Ios.Blue, 26.dp) }
             Spacer(Modifier.width(14.dp))
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -285,7 +285,7 @@ private fun ListenExercise(vm: AppViewModel, s: LessonSession, ex: Exercise.List
     Instruction("Hör zu und schreib, was du hörst")
     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircleButton({ vm.audio.speak(text) }, size = 96.dp, background = Ios.Blue) { SpeakerIcon(Color.White, 46.dp) }
+            CircleButton({ vm.audio.speakButton(text) }, size = 96.dp, background = Ios.Blue) { SpeakerIcon(Color.White, 46.dp) }
             Text("Abspielen", style = IosType.Footnote, color = Ios.SecondaryLabel, modifier = Modifier.padding(top = 6.dp))
         }
         Spacer(Modifier.width(28.dp))
