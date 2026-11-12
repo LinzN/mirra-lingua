@@ -497,7 +497,7 @@ private fun SettingsTab(vm: AppViewModel, st: AppState, course: Course) {
         Section(
             header = "Lernen",
             footer = if (!vm.audio.available) "Für ${course.name} ist auf diesem Computer keine Sprachausgabe installiert. " +
-                    (if (DesktopPlatform.isWindows) "Du kannst sie in den Windows-Einstellungen unter „Zeit und Sprache“ → „Sprache“ nachinstallieren."
+                    (if (DesktopPlatform.isWindows) "Füge sie in den Windows-Einstellungen unter „Zeit und Sprache“ → „Sprache und Region“ hinzu (mit „Sprachausgabe“) und starte Parla neu."
                     else "Installiere dafür das Paket „speech-dispatcher“ oder „espeak-ng“.") else null,
         ) {
             ListRow("Töne", leading = { IconTile("🔔", Ios.Red) },

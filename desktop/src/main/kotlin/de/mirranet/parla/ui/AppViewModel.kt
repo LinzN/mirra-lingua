@@ -81,6 +81,17 @@ class AppViewModel(val repo: Repository, val audio: Audio) {
 
     private val indexes = HashMap<String, CourseIndex>()
 
+    init {
+        // Speaker pressed but no voice for the course language: say so instead of staying silent.
+        audio.onMissingVoice = {
+            val name = state.value.course?.name ?: "diese Sprache"
+            repo.showMessage("Für $name ist auf diesem Computer keine Stimme installiert – mehr dazu in den Einstellungen.")
+        }
+    }
+
+    /** Soft click sound when a word or an answer is picked. */
+    fun tap() = audio.tap(state.value.settings.sound)
+
     private fun indexFor(c: Course): CourseIndex =
         indexes[c.id]?.takeIf { it.course.hash == c.hash } ?: CourseIndex(c).also { indexes[c.id] = it }
 

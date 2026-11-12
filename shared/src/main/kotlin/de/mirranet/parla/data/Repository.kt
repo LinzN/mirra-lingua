@@ -91,6 +91,9 @@ class Repository(private val store: LocalStore, device: String, private val log:
 
     fun consumeMessage() = _state.update { it.copy(message = null) }
 
+    /** Shows a one-off notice in the UI (toast on the phone, banner on the desktop). */
+    fun showMessage(text: String) = _state.update { it.copy(message = text) }
+
     fun setLargeText(on: Boolean) {
         store.largeText = on
         _state.update { it.copy(largeText = on) }

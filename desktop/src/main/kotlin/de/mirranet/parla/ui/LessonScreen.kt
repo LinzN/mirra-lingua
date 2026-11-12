@@ -83,6 +83,7 @@ fun LessonScreen(vm: AppViewModel, s: LessonSession) {
                 val options = if (ex is Exercise.Choice) ex.options else (ex as Exercise.Word).options
                 options.getOrNull(n - 1)?.let { picked ->
                     choice = picked; ready = true
+                    vm.tap()
                     if (ex is Exercise.Word) vm.audio.speak(picked)
                 }
                 true
@@ -122,11 +123,11 @@ fun LessonScreen(vm: AppViewModel, s: LessonSession) {
                 is Exercise.Choice -> {
                     Instruction("Was bedeutet das?")
                     Prompt(vm, s, ex.sentence.target[0], german = false, speak = true)
-                    Options(ex.options, choice, locked) { choice = it; ready = true }
+                    Options(ex.options, choice, locked) { choice = it; ready = true; vm.tap() }
                 }
                 is Exercise.Word -> {
                     Instruction("Welches Wort bedeutet „${ex.word.second}“?")
-                    Options(ex.options, choice, locked) { choice = it; ready = true; vm.audio.speak(it) }
+                    Options(ex.options, choice, locked) { choice = it; ready = true; vm.tap(); vm.audio.speak(it) }
                 }
                 is Exercise.Match -> MatchExercise(vm, ex, locked) { ready = true }
             }
@@ -244,7 +245,7 @@ private fun BankExercise(vm: AppViewModel, s: LessonSession, ex: Exercise.Bank, 
                 modifier = Modifier.padding(6.dp))
         }
         chosen.forEach { i ->
-            WordChip(ex.chips[i], { if (!locked) { chosen.remove(i); onAnswer(chosen.joinToString(" ") { ex.chips[it] }) } })
+            WordChip(ex.chips[i], { if (!locked) { chosen.remove(i); vm.tap(); onAnswer(chosen.joinToString(" ") { ex.chips[it] }) } })
         }
     }
     Spacer(Modifier.height(22.dp))
@@ -256,6 +257,7 @@ private fun BankExercise(vm: AppViewModel, s: LessonSession, ex: Exercise.Bank, 
             WordChip(chip, {
                 if (!locked) {
                     chosen.add(i)
+                    vm.tap()
                     if (!ex.toGerman) vm.audio.speak(chip)
                     onAnswer(chosen.joinToString(" ") { ex.chips[it] })
                 }
@@ -355,10 +357,12 @@ private fun MatchExercise(vm: AppViewModel, ex: Exercise.Match, locked: Boolean,
         val cur = sel
         if (cur == null || cur.first == isLeft) {
             sel = isLeft to k
+            vm.tap()
             return
         }
         if (cur.second == k) {
             matched.add(k)
+            vm.audio.pairFound(vm.state.value.settings.sound)
             sel = null
             if (matched.size == ex.pairs.size) onComplete()
         } else {
