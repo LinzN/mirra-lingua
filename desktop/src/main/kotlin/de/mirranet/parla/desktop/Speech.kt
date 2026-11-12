@@ -1,5 +1,6 @@
 package de.mirranet.parla.desktop
 
+import de.mirranet.parla.audio.FeedbackSounds
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.ByteArrayInputStream
@@ -12,10 +13,6 @@ import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.Clip
 import javax.sound.sampled.LineEvent
 import javax.sound.sampled.SourceDataLine
-import kotlin.math.PI
-import kotlin.math.exp
-import kotlin.math.min
-import kotlin.math.sin
 
 /**
  * Text-to-speech using what the operating system already has:
@@ -192,88 +189,28 @@ class Speech {
     }
 }
 
-/**
- * Short, soft feedback sounds generated on the fly (no sound files needed): a gentle tick when a word or option
- * is picked, a bright two-note chime for a correct answer, a small chime for a found pair and a soft, low
- * "hm" for a wrong answer. Played through one line that stays open, so the tick has no noticeable delay.
- */
+/** Plays the feedback sounds (see [FeedbackSounds]) through one line that stays open, so the tick has no delay. */
 object Tones {
-    private const val RATE = 44_100f
     private val player = Executors.newSingleThreadExecutor { Thread(it, "tones").apply { isDaemon = true } }
-    private val FORMAT = AudioFormat(RATE, 16, 1, true, false)
+    private val format = AudioFormat(FeedbackSounds.SAMPLE_RATE.toFloat(), 16, 1, true, false)
     private var line: SourceDataLine? = null
 
-    /** A single note: frequency, start and length in seconds, volume, decay speed and overtone mix. */
-    private class Note(
-        val freq: Double, val start: Double, val length: Double, val volume: Double,
-        val decay: Double, val overtones: List<Pair<Double, Double>> = emptyList(), val glideTo: Double? = null,
-    )
-
-    // Pre-rendered, so playing is just a write.
-    private val tapSound by lazy {
-        render(listOf(Note(1250.0, 0.0, 0.05, 0.10, 70.0, glideTo = 900.0)))
-    }
-    private val correctSound by lazy {
-        val bell = listOf(2.0 to 0.25, 3.0 to 0.08)
-        render(listOf(
-            Note(784.0, 0.0, 0.45, 0.16, 7.0, bell),     // G5
-            Note(1174.66, 0.09, 0.6, 0.17, 6.0, bell),   // D6
-        ))
-    }
-    private val pairSound by lazy {
-        render(listOf(Note(1046.5, 0.0, 0.3, 0.10, 11.0, listOf(2.0 to 0.2))))  // C6
-    }
-    private val wrongSound by lazy {
-        val soft = listOf(2.0 to 0.15)
-        render(listOf(
-            Note(330.0, 0.0, 0.22, 0.15, 9.0, soft),     // E4
-            Note(262.0, 0.12, 0.32, 0.15, 8.0, soft),    // C4
-        ))
-    }
-
-    fun tap() = play(tapSound)
-    fun correct() = play(correctSound)
-    fun pair() = play(pairSound)
-    fun wrong() = play(wrongSound)
+    fun tap() = play(FeedbackSounds.tap)
+    fun correct() = play(FeedbackSounds.correct)
+    fun pair() = play(FeedbackSounds.pair)
+    fun wrong() = play(FeedbackSounds.wrong)
 
     private fun play(pcm: ByteArray) {
         player.execute {
             runCatching {
-                val l = line ?: AudioSystem.getSourceDataLine(FORMAT).also {
-                    it.open(FORMAT, (RATE * 0.05).toInt() * 2)  // small buffer = low latency
+                val l = line ?: AudioSystem.getSourceDataLine(format).also {
+                    it.open(format, FeedbackSounds.SAMPLE_RATE / 20 * 2)  // 50 ms buffer = low latency
                     it.start()
                     line = it
                 }
                 l.write(pcm, 0, pcm.size)
             }.onFailure { line = null }
         }
-    }
-
-    private fun render(notes: List<Note>): ByteArray {
-        val n = notes.maxOf { (it.start * RATE).toInt() + (it.length * RATE).toInt() }
-        val mix = DoubleArray(n)
-        for (note in notes) {
-            val from = (note.start * RATE).toInt()
-            val len = (note.length * RATE).toInt()
-            var phase = 0.0
-            for (i in 0 until len) {
-                val t = i / RATE.toDouble()
-                val f = note.glideTo?.let { note.freq + (it - note.freq) * (i.toDouble() / len) } ?: note.freq
-                phase += 2 * PI * f / RATE
-                // Quick 5 ms attack, exponential decay and a short fade at the end avoid clicks.
-                val env = min(1.0, t / 0.005) * exp(-note.decay * t) * min(1.0, (len - i) / (RATE * 0.01))
-                var v = sin(phase)
-                for ((mult, gain) in note.overtones) v += gain * sin(phase * mult)
-                mix[from + i] += v * env * note.volume
-            }
-        }
-        val out = ByteArray(n * 2)
-        for (i in 0 until n) {
-            val s = (mix[i].coerceIn(-1.0, 1.0) * Short.MAX_VALUE).toInt()
-            out[2 * i] = (s and 0xff).toByte()
-            out[2 * i + 1] = ((s shr 8) and 0xff).toByte()
-        }
-        return out
     }
 }
 

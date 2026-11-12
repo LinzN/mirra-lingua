@@ -79,6 +79,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val indexes = HashMap<String, CourseIndex>()
 
+    /** Soft click sound when a word or an answer is picked. */
+    fun tap() = audio.tap(state.value.settings.sound)
+
     private fun indexFor(c: Course): CourseIndex =
         indexes[c.id]?.takeIf { it.course.hash == c.hash } ?: CourseIndex(c).also { indexes[c.id] = it }
 
