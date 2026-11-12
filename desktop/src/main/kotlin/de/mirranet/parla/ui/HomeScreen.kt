@@ -113,8 +113,6 @@ fun HomeScreen(vm: AppViewModel, st: AppState, course: Course) {
         }
     }
 }
-    }
-}
 
 // ---------------------------------------------------------------------- Lernen
 
