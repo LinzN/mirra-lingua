@@ -19,16 +19,6 @@ kotlin {
     sourceSets["main"].kotlin.srcDir("../shared/src/main/kotlin")
 }
 
-// Libraries the app needs on every platform. The platform-specific Compose/Skiko runtime is added separately.
-val appLibraries = listOf(
-    compose.material3,
-    "org.jetbrains.compose.material:material-icons-core:1.7.3",
-    "com.squareup.okhttp3:okhttp:4.12.0",
-    // Android ships org.json; on the desktop it comes from Maven.
-    "org.json:json:20240303",
-    "org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.9.0",
-)
-
 // Runtime classpath of the Windows build: same libraries, but with the Windows Compose/Skiko runtime
 // instead of the one for the build machine. Lets the Linux build server produce the Windows installer.
 val windowsRuntime: Configuration by configurations.creating {
@@ -51,6 +41,17 @@ val windowsRuntime: Configuration by configurations.creating {
 }
 
 dependencies {
+    // Libraries the app needs on every platform; the platform-specific Compose/Skiko runtime is added separately.
+    // (Defined in here: `compose.material3` only exists inside the dependencies block.)
+    val appLibraries = listOf(
+        compose.material3,
+        "org.jetbrains.compose.material:material-icons-core:1.7.3",
+        "com.squareup.okhttp3:okhttp:4.12.0",
+        // Android ships org.json; on the desktop it comes from Maven.
+        "org.json:json:20240303",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.9.0",
+    )
+
     implementation(compose.desktop.currentOs)
     appLibraries.forEach { implementation(it) }
 
