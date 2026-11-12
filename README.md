@@ -1,7 +1,33 @@
-# Parla
+<p align="center">
+  <img src="docs/logo.svg" width="128" height="128" alt="Parla logo">
+</p>
 
-A calm, simple language learning app for Android, Linux and Windows: units grouped by level, short lessons with three hearts, and strength
-bars that fade and ask for review – and nothing else. No ads, no gems, no leagues.
+<h1 align="center">Parla</h1>
+
+<p align="center">
+  <b>A calm, simple language learning app.</b><br>
+  Short lessons, three hearts, strength bars that ask for review – and nothing else.<br>
+  No ads, no gems, no leagues.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Android-58A700?style=flat-square&logo=android&logoColor=white" alt="Android">
+  <img src="https://img.shields.io/badge/Linux-58A700?style=flat-square&logo=linux&logoColor=white" alt="Linux">
+  <img src="https://img.shields.io/badge/Windows-58A700?style=flat-square&logo=windows&logoColor=white" alt="Windows">
+  <img src="https://img.shields.io/badge/Kotlin-Compose-8B5A2B?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin + Compose">
+</p>
+
+<p align="center">
+  <a href="#android-app">Android app</a> ·
+  <a href="#desktop-app-linux-windows">Desktop app</a> ·
+  <a href="#how-it-fits-together">How it works</a> ·
+  <a href="https://github.com/Parla-Studio/parla-server">Server</a>
+</p>
+
+---
+
+Parla runs on Android, Linux and Windows: units grouped by level, short lessons with three hearts, and strength
+bars that fade and ask for review.
 
 The first courses are **English** and **French** for German speakers, each with 21 units from A1 to B1
 (numbers, colours, time, weather, city, questions, restaurant, free time, past and future tense, travel, work …).
