@@ -80,7 +80,10 @@ class Audio(context: Context) : TextToSpeech.OnInitListener {
     }
 }
 
-/** Plays the feedback sounds through one streaming AudioTrack that stays open, so the tick has no delay. */
+/**
+ * Plays the feedback sounds through one streaming AudioTrack (created once, so the tick has no delay). The sounds end
+ * in silence, and the track is paused after each one, so it never plays anything while idle.
+ */
 private class Tones {
     private val player = Executors.newSingleThreadExecutor { Thread(it, "tones").apply { isDaemon = true } }
     private var track: AudioTrack? = null
@@ -89,8 +92,17 @@ private class Tones {
         player.execute {
             runCatching {
                 val t = track ?: create().also { track = it }
-                t.write(pcm, 0, pcm.size)
-            }.onFailure { track = null }
+                t.play()
+                t.write(pcm, 0, pcm.size)  // blocking: returns once the data is queued
+                // write() returns once the rest fits into the track's buffer: wait for that to play, then pause
+                // so the idle track stays silent.
+                Thread.sleep(t.bufferSizeInFrames * 1000L / FeedbackSounds.SAMPLE_RATE + 30)
+                t.pause()
+                t.flush()
+            }.onFailure {
+                runCatching { track?.release() }
+                track = null
+            }
         }
     }
 
@@ -114,7 +126,6 @@ private class Tones {
             .setBufferSizeInBytes(minBuffer)
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
-            .also { it.play() }
     }
 
     fun release() {

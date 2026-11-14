@@ -189,7 +189,11 @@ class Speech {
     }
 }
 
-/** Plays the feedback sounds (see [FeedbackSounds]) through one line that stays open, so the tick has no delay. */
+/**
+ * Plays the feedback sounds (see [FeedbackSounds]). The line is opened once (so the tick has no delay), but it is
+ * only running while a sound plays: after each sound it is drained and stopped. A line left running with nothing
+ * to play can repeat the last bit of audio on Windows (soft "plops" in the background).
+ */
 object Tones {
     private val player = Executors.newSingleThreadExecutor { Thread(it, "tones").apply { isDaemon = true } }
     private val format = AudioFormat(FeedbackSounds.SAMPLE_RATE.toFloat(), 16, 1, true, false)
@@ -205,12 +209,18 @@ object Tones {
         player.execute {
             runCatching {
                 val l = line ?: AudioSystem.getSourceDataLine(format).also {
-                    it.open(format, FeedbackSounds.SAMPLE_RATE / 20 * 2)  // 50 ms buffer = low latency
-                    it.start()
+                    it.open(format, FeedbackSounds.SAMPLE_RATE / 10 * 2)  // 100 ms buffer
                     line = it
                 }
+                l.start()
                 l.write(pcm, 0, pcm.size)
-            }.onFailure { line = null }
+                l.drain()   // wait until everything was played ...
+                l.stop()    // ... then stop, so nothing is replayed while idle
+                l.flush()
+            }.onFailure {
+                runCatching { line?.close() }
+                line = null
+            }
         }
     }
 }
