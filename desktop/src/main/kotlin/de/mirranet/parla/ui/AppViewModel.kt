@@ -65,7 +65,8 @@ class LessonSession(
     val current: Exercise get() = exercises[position]
     val isPractice get() = skillId == null
 
-    data class Feedback(val correct: Boolean, val note: String?, val solution: String)
+    /** [skipped]: "Weiß ich nicht" was pressed – shown as a hint with the solution, but counted as a mistake. */
+    data class Feedback(val correct: Boolean, val note: String?, val solution: String, val skipped: Boolean = false)
 }
 
 /** UI state holder; lives as long as the application window. */
@@ -225,7 +226,8 @@ class AppViewModel(val repo: Repository, val audio: Audio) {
             if (grade.correct) s.correctAnswers++
             adapt(s, grade.correct)
         }
-        audio.feedback(grade.correct, state.value.settings.sound)
+        // Skipping is not "wrong" for the ear: no error sound, the solution is shown as a hint.
+        if (!forceWrong) audio.feedback(grade.correct, state.value.settings.sound)
         val spokenAnswer = when (ex) {
             is Exercise.Bank -> if (!ex.toGerman) ex.sentence.target[0] else null
             is Exercise.Type -> if (!ex.toGerman) ex.sentence.target[0] else null
@@ -233,7 +235,7 @@ class AppViewModel(val repo: Repository, val audio: Audio) {
             else -> null
         }
         spokenAnswer?.let { audio.speak(it) }
-        s.feedback = LessonSession.Feedback(grade.correct, grade.note, ex.solution)
+        s.feedback = LessonSession.Feedback(grade.correct, grade.note, ex.solution, skipped = forceWrong)
     }
 
     fun next(s: LessonSession) {
@@ -313,6 +315,7 @@ class AppViewModel(val repo: Repository, val audio: Audio) {
         }
         val goal = state.value.settings.goal
         val accuracy = if (s.answered > 0) (100 * s.correctAnswers / s.answered) else null
+        audio.lessonComplete(state.value.settings.sound)
         screen = Screen.Result(title, detail, xp, s.mistakes, before < goal && before + xp >= goal, accuracy)
     }
 

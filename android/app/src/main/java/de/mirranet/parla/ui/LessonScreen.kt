@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,7 +73,7 @@ fun LessonScreen(vm: AppViewModel, s: LessonSession) {
     var ready by remember(s.position, ex) { mutableStateOf(false) }
     val fb = s.feedback
     LaunchedEffect(fb) {
-        if (fb != null && !fb.correct) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        if (fb != null && !fb.correct && !fb.skipped) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
     }
 
     Column(Modifier.fillMaxSize().background(Color.White).statusBarsPadding().navigationBarsPadding().imePadding()) {
@@ -145,18 +146,20 @@ fun LessonScreen(vm: AppViewModel, s: LessonSession) {
 
 @Composable
 private fun FeedbackPanel(fb: LessonSession.Feedback, onNext: () -> Unit) {
-    val tint = if (fb.correct) Ios.GreenTint else Ios.RedTint
-    val color = if (fb.correct) Ios.GreenDark else Ios.RedDark
+    // Three looks: correct (green), wrong (red), skipped with "Weiß ich nicht" (blue hint).
+    val tint = when { fb.correct -> Ios.GreenTint; fb.skipped -> Ios.BlueTint; else -> Ios.RedTint }
+    val color = when { fb.correct -> Ios.GreenDark; fb.skipped -> Ios.Blue; else -> Ios.RedDark }
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)).background(tint)
             .padding(horizontal = 20.dp, vertical = 18.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(34.dp).clip(CircleShape).background(if (fb.correct) Ios.Green else Ios.Red), contentAlignment = Alignment.Center) {
-                Icon(if (fb.correct) Icons.Rounded.Check else Icons.Rounded.Close, contentDescription = null, tint = Color.White)
+            Box(Modifier.size(34.dp).clip(CircleShape).background(when { fb.correct -> Ios.Green; fb.skipped -> Ios.Blue; else -> Ios.Red }), contentAlignment = Alignment.Center) {
+                Icon(when { fb.correct -> Icons.Rounded.Check; fb.skipped -> Icons.Rounded.Info; else -> Icons.Rounded.Close },
+                    contentDescription = null, tint = Color.White)
             }
             Spacer(Modifier.width(12.dp))
-            Text(if (fb.correct) "Richtig!" else "Nicht ganz", style = IosType.Title3, color = color)
+            Text(when { fb.correct -> "Richtig!"; fb.skipped -> "Kein Problem – so geht's"; else -> "Nicht ganz" }, style = IosType.Title3, color = color)
         }
         val detail = if (fb.correct) fb.note else fb.solution
         if (!detail.isNullOrEmpty()) {
@@ -165,7 +168,7 @@ private fun FeedbackPanel(fb: LessonSession.Feedback, onNext: () -> Unit) {
                 modifier = Modifier.padding(top = if (fb.correct) 8.dp else 2.dp))
         }
         Spacer(Modifier.height(14.dp))
-        IosButton("Weiter", onNext, Modifier.fillMaxWidth(), style = if (fb.correct) ButtonStyle.Success else ButtonStyle.Destructive)
+        IosButton("Weiter", onNext, Modifier.fillMaxWidth(), style = when { fb.correct -> ButtonStyle.Success; fb.skipped -> ButtonStyle.Filled; else -> ButtonStyle.Destructive })
     }
 }
 

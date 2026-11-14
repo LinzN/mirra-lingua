@@ -69,6 +69,11 @@ class Audio(context: Context) : TextToSpeech.OnInitListener {
         if (enabled) tones.play(FeedbackSounds.pair)
     }
 
+    /** Rising chime when a lesson is finished. */
+    fun lessonComplete(enabled: Boolean) {
+        if (enabled) tones.play(FeedbackSounds.lessonComplete)
+    }
+
     fun release() {
         tts.shutdown()
         tones.release()

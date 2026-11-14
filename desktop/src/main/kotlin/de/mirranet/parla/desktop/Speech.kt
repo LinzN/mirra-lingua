@@ -199,6 +199,7 @@ object Tones {
     fun correct() = play(FeedbackSounds.correct)
     fun pair() = play(FeedbackSounds.pair)
     fun wrong() = play(FeedbackSounds.wrong)
+    fun lessonComplete() = play(FeedbackSounds.lessonComplete)
 
     private fun play(pcm: ByteArray) {
         player.execute {
@@ -254,6 +255,10 @@ class Audio {
     /** Small chime when a matching pair was found. */
     fun pairFound(enabled: Boolean) {
         if (enabled) Tones.pair()
+    }
+    /** Rising chime when a lesson is finished. */
+    fun lessonComplete(enabled: Boolean) {
+        if (enabled) Tones.lessonComplete()
     }
     fun release() = speech.release()
 }
